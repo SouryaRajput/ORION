@@ -1,10 +1,10 @@
 {
-  "short_interactions": 71,
-  "long_interactions": 28,
+  "short_interactions": 76,
+  "long_interactions": 30,
   "technical_queries": 0,
-  "casual_queries": 99,
+  "casual_queries": 106,
   "morning_usage": 57,
-  "evening_usage": 28,
+  "evening_usage": 35,
   "late_night_usage": 0,
   "topics": {
     "casual_chat": 7

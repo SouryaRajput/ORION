@@ -209,8 +209,41 @@ def handle_intent(data):
                 
         if text.startswith("open "):
             app = text.replace("open ", "").strip()
-            if open_app(app): speech_queue.put(f"Opening {app}")
-            else: speech_queue.put(f"I couldn't find {app}")
+            
+            # Explicitly asking for a website
+            search_query = app
+            if "on web" in app or "website" in app:
+                search_query = app.replace("on web", "").replace("website", "").strip()
+                from duckduckgo_search import DDGS
+                try:
+                    with DDGS() as ddgs:
+                        results = list(ddgs.text(search_query, max_results=1))
+                        if results:
+                            import webbrowser
+                            webbrowser.open(results[0]["href"])
+                            speech_queue.put(f"Opening {search_query} on the web.")
+                            return
+                except:
+                    pass
+
+            # Try local app first
+            if open_app(app): 
+                speech_queue.put(f"Opening {app}")
+            else:
+                # Dynamic fallback: Search web and open top result
+                from duckduckgo_search import DDGS
+                try:
+                    with DDGS() as ddgs:
+                        results = list(ddgs.text(search_query, max_results=1))
+                        if results:
+                            import webbrowser
+                            webbrowser.open(results[0]["href"])
+                            speech_queue.put(f"I couldn't find an app for {search_query}, but I opened the website for you.")
+                        else:
+                            speech_queue.put(f"I couldn't find {search_query} on your system or the web.")
+                except Exception as e:
+                    print(f"Web fallback error: {e}")
+                    speech_queue.put(f"I couldn't find {app}")
             return
 
     elif intent == "study_mode":
