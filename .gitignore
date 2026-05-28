@@ -1,0 +1,28 @@
+# Environments
+.env
+venv*
+env/
+whisper-env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# MacOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs and Caches
+logs/
+*.log
+cache/
+
+# Audio / temporary files
+*.wav
+*.mp3
+dummy.wav

@@ -1,0 +1,30 @@
+# ORION - Core Dependencies
+
+# Wake Word & Audio
+pvporcupine
+pyaudio
+webrtcvad
+soundfile
+
+# AI & LLM APIs
+groq
+requests
+
+# Environment
+python-dotenv
+
+# Desktop UI & GUI
+PyQt6
+
+# Web Search & OCR
+duckduckgo-search
+beautifulsoup4
+pytesseract
+Pillow
+
+# Study Simulator
+pydantic
+manim
+pygame
+sympy
+numpy

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ORION</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- Left Panel: Memory -->
+    <div id="memoryPanel">
+        <h3>Memory</h3>
+        <ul id="memoryList"></ul>
+    </div>
+
+    <!-- Right Panel: Chat -->
+    <div id="chatPanel">
+        <div id="modeBadge">Mode: general</div>
+        <div id="chat"></div>
+
+        <div id="inputArea">
+            <input id="messageInput" placeholder="Type here..." />
+            <button id="sendBtn">Send</button>
+        </div>
+    </div>
+
+</div>
+
+<script src="/static/js/chat.js"></script>
+<script src="/static/js/memory.js"></script>
+<script src="/static/js/ui.js"></script>
+
+</body>
+</html>

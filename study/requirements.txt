@@ -1,0 +1,28 @@
+# JARVIS Study Mode — Dependencies
+# Install with: pip install -r study/requirements.txt
+
+# Core
+pydantic>=2.0
+python-dotenv
+
+# AI
+requests
+
+# Animation Engine
+manim
+
+# GUI
+PyQt6
+PyQt6-Qt6
+PyQt6-sip
+
+# Simulations
+pygame
+
+# Math
+sympy
+numpy
+
+# Audio (for narration sync — reuses JARVIS TTS)
+# elevenlabs (already installed via JARVIS)
+# soundfile (already installed via JARVIS)
