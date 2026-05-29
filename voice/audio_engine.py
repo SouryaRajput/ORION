@@ -19,13 +19,13 @@ ACCESS_KEY = os.getenv("PICOVOICE_KEY")
 # CONFIG
 # -----------------------
 
-RATE = 16000
+from Core.config import config
 
-vad = webrtcvad.Vad(3)  # Most aggressive mode to cut off instantly when speech stops
+vad = webrtcvad.Vad(config.voice.vad_aggressiveness)
 
 porcupine = pvporcupine.create(
     access_key=ACCESS_KEY,
-    keywords=["jarvis"]
+    keywords=config.system.wake_words
 )
 
 # 🔥 IMPORTANT FIX → match Porcupine frame size
@@ -34,8 +34,8 @@ FRAME_SIZE = porcupine.frame_length  # usually 512
 pa = pyaudio.PyAudio()
 
 stream = pa.open(
-    rate=RATE,
-    channels=1,
+    rate=config.voice.rate,
+    channels=config.voice.channels,
     format=pyaudio.paInt16,
     input=True,
     frames_per_buffer=FRAME_SIZE
@@ -101,12 +101,12 @@ def listen():
         if sm.current == AgentState.LISTENING and not speech_started:
             now = time.time()
             if sm.waiting_for_followup:
-                if now - sm.followup_start_time > getattr(state, "FOLLOWUP_TIMEOUT", 10):
+                if now - sm.followup_start_time > config.voice.auto_sleep_followup_timeout:
                     print("💤 Follow-up timeout. Going to sleep.")
                     sm.transition(AgentState.SLEEPING)
                     return None
             else:
-                if now - sm.last_engaged_time > getattr(state, "ENGAGE_TIMEOUT", 10):
+                if now - sm.last_engaged_time > config.voice.auto_sleep_idle_timeout:
                     print("💤 Idle timeout. Going to sleep.")
                     sm.transition(AgentState.SLEEPING)
                     return None
@@ -128,13 +128,13 @@ def listen():
         vad_frame = pcm[:480 * 2]
 
         try:
-            is_speech = vad.is_speech(vad_frame, RATE)
+            is_speech = vad.is_speech(vad_frame, config.voice.rate)
             
             # Strict RMS volume check to reject fan noise / static hallucinations
             if is_speech:
                 sum_squares = sum(s*s for s in pcm_unpacked)
                 rms = math.sqrt(sum_squares / len(pcm_unpacked))
-                if rms < 400:  # Very strict noise floor threshold
+                if rms < config.voice.volume_threshold_rms:  # Very strict noise floor threshold
                     is_speech = False
                     
         except:
@@ -163,7 +163,7 @@ def listen():
         if speech_started and silence_frames > 8:
             
             # 🔥 Ignore ultra-short blips (e.g. typing, breathing) < 0.5s
-            if len(audio_buffer) < (RATE * 0.5) / FRAME_SIZE:
+            if len(audio_buffer) < (config.voice.rate * 0.5) / FRAME_SIZE:
                 speech_started = False
                 silence_frames = 0
                 audio_buffer = []
@@ -176,13 +176,15 @@ def listen():
                 .astype(np.float32) / 32768.0
             )
 
+            from Core.latency import tracker
+            tracker.mark_end_of_speech()
             return audio_np
 
         # -----------------------
         # SAFETY TIMEOUT (~4 sec)
         # -----------------------
 
-        if speech_started and len(audio_buffer) > (RATE * 8) / FRAME_SIZE:
+        if speech_started and len(audio_buffer) > (config.voice.rate * 8) / FRAME_SIZE:
 
             audio_data = b"".join(audio_buffer)
 
@@ -191,4 +193,6 @@ def listen():
                 .astype(np.float32) / 32768.0
             )
 
+            from Core.latency import tracker
+            tracker.mark_end_of_speech()
             return audio_np

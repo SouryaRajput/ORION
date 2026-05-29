@@ -18,9 +18,11 @@ log = get_logger("ai_router")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+from Core.config import config
+
 # Model tiers: fast for planning, smart for explanations
-FAST_MODEL = "google/gemini-2.5-flash"
-SMART_MODEL = "google/gemini-2.5-flash"
+FAST_MODEL = config.ai.models.fast
+SMART_MODEL = config.ai.models.smart
 
 _session = requests.Session()
 

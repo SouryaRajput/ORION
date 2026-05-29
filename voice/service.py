@@ -58,6 +58,9 @@ def run_voice_service():
             
             print("🎤 Capturing query...")
             text = transcribe_audio(audio)
+            
+            from Core.latency import tracker
+            tracker.mark_checkpoint("STT Engine")
 
             if not text or (text.startswith("[") and text.endswith("]")) or len(text.split()) < 2:
                 sm.transition(AgentState.LISTENING)
@@ -79,6 +82,9 @@ def run_voice_service():
         sm.transition(AgentState.PROCESSING)
 
         text = transcribe_audio(audio)
+        
+        from Core.latency import tracker
+        tracker.mark_checkpoint("STT Engine")
 
         if not text or (text.startswith("[") and text.endswith("]")) or len(text.split()) < 2:
             sm.transition(AgentState.LISTENING)

@@ -81,8 +81,15 @@ threading.Thread(target=speech_worker, daemon=True).start()
 def speak_stream(stream):
     buffer = ""
     full_reply = ""
+    first_token = True
     for chunk in stream:
         if sm.interrupt_flag: break
+        
+        if first_token:
+            from Core.latency import tracker
+            tracker.mark_checkpoint("LLM (Time To First Token)")
+            first_token = False
+            
         full_reply += chunk
         buffer += chunk
         
@@ -131,8 +138,11 @@ def handle_speech_recognized(text):
     sm.set_followup(False)
     
     # 1. Fast Paths
-    from tools.fast_commands import check_fast_command
+    from plugins.plugin_manager import check_fast_command
     fast_result = check_fast_command(text)
+    
+    from Core.latency import tracker
+    tracker.mark_checkpoint("Local Fast Commands")
     
     if fast_result:
         action = fast_result.get("action")
@@ -151,6 +161,8 @@ def handle_speech_recognized(text):
     # 2. Intent Router
     from Core.intent import classify_intent
     intent_data = classify_intent(text)
+    tracker.mark_checkpoint("Intent Router (LLM)")
+    
     intent = intent_data.get("intent", "general")
     target = intent_data.get("target", "")
     action_type = intent_data.get("action_type", "")

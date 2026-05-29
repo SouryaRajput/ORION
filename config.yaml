@@ -1,0 +1,34 @@
+system:
+  name: "ORION"
+  version: "2.0"
+  wake_words:
+    - "jarvis"
+
+voice:
+  rate: 16000
+  channels: 1
+  vad_aggressiveness: 3
+  frame_size: 512
+  volume_threshold_rms: 400
+  auto_sleep_idle_timeout: 10
+  auto_sleep_followup_timeout: 10
+  mute_duration_after_speech: 1.0
+
+ai:
+  models:
+    fast: "google/gemini-2.5-flash"
+    smart: "google/gemini-2.5-flash"
+    reasoning: "google/gemini-2.5-pro"
+  max_tokens:
+    default: 1000
+    scene_planner: 8000
+
+study:
+  manim_quality: "low"
+  cache_dir: "cache/study"
+  max_workers: 2
+
+logging:
+  dir: "logs"
+  level_console: "INFO"
+  level_file: "DEBUG"

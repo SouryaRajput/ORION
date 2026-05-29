@@ -29,7 +29,7 @@ from tools.planner import create_plan
 from tools.executor import execute_plan
 from tools.task_manager import start_task, get_current_task
 from tools.response_style import detect_response_style
-from tools.fast_commands import check_fast_command
+from plugins.plugin_manager import check_fast_command
 
 import datetime
 

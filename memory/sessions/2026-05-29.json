@@ -1,36 +1,6 @@
 [
   {
     "role": "user",
-    "content": "thank you.",
-    "topic": "general"
-  },
-  {
-    "role": "assistant",
-    "content": "You're welcome, like, no big deal, just a fun conversation...",
-    "topic": "general"
-  },
-  {
-    "role": "user",
-    "content": "what is happening in the state of hormones?",
-    "topic": "general"
-  },
-  {
-    "role": "assistant",
-    "content": "Uh, hormones are like, constantly fluctuating, you know \u2014 they're affected by everything, from sleep to stress to what we eat, and, well, it's pretty complex...",
-    "topic": "general"
-  },
-  {
-    "role": "user",
-    "content": "from sleep",
-    "topic": "general"
-  },
-  {
-    "role": "assistant",
-    "content": "sleep deprivation, like, really messes with hormone levels \u2014 especially cortisol and insulin, you know, it's a big deal...",
-    "topic": "general"
-  },
-  {
-    "role": "user",
     "content": "[Context: from sleep | sleep deprivation, like, really messes with hormone levels \u2014 especially cortisol and insulin, you know, it's a big deal...]\nFollow-up question: how do you prevent",
     "topic": "general"
   },
@@ -57,6 +27,36 @@
   {
     "role": "assistant",
     "content": "no problem, have a great day, by the way...",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "what's an integral of x",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "the integral of x, uh, is x squared, over 2, you know...",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "what is 20 times 20?",
+    "topic": "productivity"
+  },
+  {
+    "role": "assistant",
+    "content": "that's an easy one, 20 times 20, like, is 400, yeah...",
+    "topic": "productivity"
+  },
+  {
+    "role": "user",
+    "content": "thank you.",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "no worries, anytime...",
     "topic": "general"
   }
 ]

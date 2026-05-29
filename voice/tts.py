@@ -85,6 +85,9 @@ def audio_player():
                 try:
                     process.stdin.write(chunk)
                     process.stdin.flush()
+                    
+                    from Core.latency import tracker
+                    tracker.end_tracking_and_report()
                 except BrokenPipeError:
                     break
 
