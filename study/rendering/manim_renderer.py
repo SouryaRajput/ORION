@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import textwrap
 from pathlib import Path
+import sys
 from typing import Optional
 
 from study.models.scene_schema import (
@@ -40,13 +41,17 @@ def _obj_to_manim(obj: SceneObject) -> str:
             code = f'Circle(radius={r}, {color}, fill_opacity=0.3, stroke_width=2){pos}'
 
         case ObjectType.ARROW | ObjectType.VECTOR:
-            sx, sy = p.get("start", [obj.position.x - 1, obj.position.y])
-            ex, ey = p.get("end", [obj.position.x + 1, obj.position.y])
+            start = p.get("start", [obj.position.x - 1, obj.position.y])
+            end = p.get("end", [obj.position.x + 1, obj.position.y])
+            sx, sy = start[0], start[1]
+            ex, ey = end[0], end[1]
             code = f'Arrow(start=[{sx}, {sy}, 0], end=[{ex}, {ey}, 0], {color}, buff=0, stroke_width=3)'
 
         case ObjectType.LINE:
-            sx, sy = p.get("start", [-3, 0])
-            ex, ey = p.get("end", [3, 0])
+            start = p.get("start", [-3, 0])
+            end = p.get("end", [3, 0])
+            sx, sy = start[0], start[1]
+            ex, ey = end[0], end[1]
             code = f'Line(start=[{sx}, {sy}, 0], end=[{ex}, {ey}, 0], {color}, stroke_width=2)'
 
         case ObjectType.TEXT:
@@ -158,6 +163,40 @@ def _anim_to_manim(anim: SceneAnimation) -> str:
             return f"self.wait({dur})  # Unknown animation: {anim.type}"
 
 
+import hashlib
+from study.utils.cache import get_render_path, is_render_cached, RENDERS_DIR, AUDIO_DIR
+
+def _generate_audio_for_action(narration: str) -> tuple[Optional[str], float]:
+    """Generates TTS audio and returns its path and duration in seconds."""
+    if not narration.strip():
+        return None, 0.0
+    
+    # Hash narration to cache audio
+    audio_hash = hashlib.md5(narration.encode()).hexdigest()
+    audio_path = AUDIO_DIR / f"{audio_hash}.mp3"
+    
+    if not audio_path.exists():
+        # Generate with edge-tts
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "edge_tts", "--voice", "en-US-GuyNeural", "--text", narration, "--write-media", str(audio_path)],
+                capture_output=True, check=True
+            )
+        except subprocess.CalledProcessError as e:
+            log.error(f"edge-tts failed: {e.stderr}")
+            return None, 0.0
+            
+    # Get duration with ffprobe
+    try:
+        res = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)],
+            capture_output=True, text=True, check=True
+        )
+        return str(audio_path.absolute()), float(res.stdout.strip())
+    except Exception as e:
+        log.error(f"ffprobe failed: {e}")
+        return str(audio_path.absolute()), 3.0 # fallback
+
 def generate_manim_script(scene: ScenePlan) -> str:
     """Generate a complete, runnable Manim Python script from a ScenePlan."""
     class_name = "".join(word.capitalize() for word in scene.scene_id.split("_")) + "Scene"
@@ -174,8 +213,29 @@ def generate_manim_script(scene: ScenePlan) -> str:
             if obj.label and obj.type not in (ObjectType.TEXT, ObjectType.LATEX):
                 add_lines.append(f"self.add({obj.id}_label)")
 
-    # Build animation lines
-    anim_lines = [_anim_to_manim(a) for a in scene.animations]
+    # Build animation lines based on Actions
+    anim_lines = []
+    for i, action in enumerate(scene.actions):
+        # Generate audio
+        audio_path, duration = _generate_audio_for_action(action.narration)
+        
+        anim_lines.append(f"        # Action {i+1}: {action.narration[:50]}...")
+        if audio_path:
+            # Escape path for python script
+            safe_path = audio_path.replace('\\', '\\\\')
+            anim_lines.append(f"        self.add_sound('{safe_path}')")
+            
+        action_anim_duration = 0.0
+        for anim in action.animations:
+            anim_lines.append(f"        " + _anim_to_manim(anim))
+            action_anim_duration = max(action_anim_duration, anim.duration)
+            
+        # Wait if audio is longer than animations
+        if duration > action_anim_duration:
+            extra_wait = duration - action_anim_duration
+            anim_lines.append(f"        self.wait({extra_wait:.2f})")
+            
+        anim_lines.append(f"        self.wait(0.5)") # small pause between actions
 
     # Assemble the script
     script = f'''from manim import *
@@ -189,11 +249,11 @@ class {class_name}(Scene):
         # --- CREATE OBJECTS ---
 {textwrap.indent(chr(10).join(obj_lines), "        ")}
 
-        # --- ANIMATIONS ---
-{textwrap.indent(chr(10).join(anim_lines) if anim_lines else "self.wait(1)", "        ")}
+        # --- ANIMATIONS & AUDIO ---
+{chr(10).join(anim_lines) if anim_lines else "        self.wait(1)"}
 
         # Final hold
-        self.wait(1)
+        self.wait(2)
 '''
     return script
 

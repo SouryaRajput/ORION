@@ -19,8 +19,9 @@ LESSONS_DIR = CACHE_DIR / "lessons"
 SCENES_DIR = CACHE_DIR / "scenes"
 RENDERS_DIR = CACHE_DIR / "renders"
 API_DIR = CACHE_DIR / "api_responses"
+AUDIO_DIR = CACHE_DIR / "audio"
 
-for d in [LESSONS_DIR, SCENES_DIR, RENDERS_DIR, API_DIR]:
+for d in [LESSONS_DIR, SCENES_DIR, RENDERS_DIR, API_DIR, AUDIO_DIR]:
     d.mkdir(exist_ok=True)
 
 

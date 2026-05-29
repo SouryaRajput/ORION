@@ -113,7 +113,7 @@ class SceneObject(BaseModel):
 
 class SceneAnimation(BaseModel):
     """A single animation step applied to one or more objects."""
-    target_id: str = Field(..., description="ID of the object to animate")
+    target_id: str = Field(default="none", description="ID of the object to animate (or 'none' for wait)")
     type: AnimationType
     duration: float = Field(default=1.0, ge=0.1, le=10.0)
     params: dict = Field(
@@ -122,12 +122,10 @@ class SceneAnimation(BaseModel):
     )
 
 
-class NarrationCue(BaseModel):
-    """A narration segment synchronized to the scene timeline."""
-    text: str = Field(..., description="What to say")
-    start_time: float = Field(default=0.0, ge=0.0, description="When to start speaking (seconds)")
-    emphasis_words: list[str] = Field(default_factory=list, description="Words to emphasize in TTS")
-
+class SceneAction(BaseModel):
+    """A synchronized block of narration and visual animations."""
+    narration: str = Field(..., description="The explanation spoken by the tutor")
+    animations: list[SceneAnimation] = Field(default_factory=list, description="Animations to execute while speaking")
 
 # --------------------------------------------------
 # TOP-LEVEL SCENE
@@ -146,8 +144,7 @@ class ScenePlan(BaseModel):
 
     # Scene content
     objects: list[SceneObject] = Field(default_factory=list)
-    animations: list[SceneAnimation] = Field(default_factory=list)
-    narration: list[NarrationCue] = Field(default_factory=list)
+    actions: list[SceneAction] = Field(default_factory=list, description="Sequential actions combining speech and visuals")
 
     # Metadata
     subconcept_name: str = Field(default="", description="Which subconcept this scene illustrates")
@@ -168,23 +165,21 @@ class ScenePlan(BaseModel):
                         "color": "#3B82F6",
                         "size": 1.0,
                         "params": {"width": 1.5, "height": 1.0}
-                    },
-                    {
-                        "id": "surface",
-                        "type": "line",
-                        "position": {"x": 0, "y": -0.5, "z": 0},
-                        "color": "#9CA3AF",
-                        "params": {"start": [-5, -0.5], "end": [5, -0.5]}
                     }
                 ],
-                "animations": [
-                    {"target_id": "block", "type": "fade_in", "duration": 0.5},
-                    {"target_id": "block", "type": "wait", "duration": 2.0},
-                    {"target_id": "block", "type": "shift", "duration": 2.0, "params": {"dx": 4, "dy": 0}}
-                ],
-                "narration": [
-                    {"text": "Look at this block sitting on a surface.", "start_time": 0.5},
-                    {"text": "Without any force, it stays perfectly still.", "start_time": 3.0}
+                "actions": [
+                    {
+                        "narration": "Look at this block sitting on a surface. Without any force, it stays perfectly still.",
+                        "animations": [
+                            {"target_id": "block", "type": "fade_in", "duration": 1.0}
+                        ]
+                    },
+                    {
+                        "narration": "But if we apply a push, it starts to move.",
+                        "animations": [
+                            {"target_id": "block", "type": "shift", "duration": 2.0, "params": {"dx": 4, "dy": 0}}
+                        ]
+                    }
                 ]
             }
         }

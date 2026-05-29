@@ -122,7 +122,9 @@ def audio_player():
                         sm.handoff_to_sleep = False
                     else:
                         sm.transition(AgentState.LISTENING)
-                state.LAST_SPOKEN_TIME = time.time()
+            
+            # Always update LAST_SPOKEN_TIME so the 1.0s room echo buffer applies
+            state.LAST_SPOKEN_TIME = time.time()
 
 # 🚀 START PLAYER THREAD
 threading.Thread(target=audio_player, daemon=True).start()
@@ -366,7 +368,9 @@ def speak_audio(text, pause_ms=0):
                         sm.handoff_to_sleep = False
                     else:
                         sm.transition(AgentState.LISTENING)
-                state.LAST_SPOKEN_TIME = time.time()
+            
+            # Always update LAST_SPOKEN_TIME so the 1.0s room echo buffer applies
+            state.LAST_SPOKEN_TIME = time.time()
 
     # 🚀 RUN TTS IN PARALLEL
     threading.Thread(target=tts_worker, daemon=True).start()

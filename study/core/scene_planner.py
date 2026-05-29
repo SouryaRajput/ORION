@@ -55,16 +55,14 @@ ANIMATION STYLE RULES
 10. Keep total scene to 15-30 seconds. Quality over quantity.
 
 ═══════════════════════════════════════════
-NARRATION SYNC RULES
+SYNC RULES (The "Action" System)
 ═══════════════════════════════════════════
 
-- Each narration cue should be 1-2 sentences.
-- Time narration to appear EXACTLY when its visual appears.
-- The narration should EXPLAIN what the student is seeing.
-- Use 6-10 narration cues per scene for smooth pacing.
-- Leave 2-3 second gaps between cues for comprehension.
-- The narration text should sound like an excited tutor speaking, not a textbook.
-- Start with the hook/curiosity, then build understanding visually.
+- You must structure the scene as a sequence of "actions".
+- Each action has a `narration` (what the tutor says) and a list of `animations` (what happens while they say it).
+- First write the explanation (narration), then add visual animations to match it perfectly.
+- If a step requires the student to just look, use an empty narration "" and a "wait" animation.
+- Keep the narration conversational and engaging.
 
 ═══════════════════════════════════════════
 OBJECT PLACEMENT RULES
@@ -107,15 +105,19 @@ OUTPUT FORMAT — Return ONLY valid JSON:
       "params": {"width": 1.5, "height": 1.0}
     }
   ],
-  "animations": [
-    {"target_id": "obj_id", "type": "fade_in", "duration": 0.8, "params": {}},
-    {"target_id": "obj_id", "type": "wait", "duration": 1.5, "params": {}},
-    {"target_id": "obj_id", "type": "shift", "duration": 2.0, "params": {"dx": 3, "dy": 0}}
-  ],
-  "narration": [
-    {"text": "Let's start by imagining...", "start_time": 0.5, "emphasis_words": ["imagining"]},
-    {"text": "Notice how this block...", "start_time": 3.0, "emphasis_words": ["block"]},
-    {"text": "And here's the key insight...", "start_time": 7.0, "emphasis_words": ["key insight"]}
+  "actions": [
+    {
+      "narration": "Let's start by imagining...",
+      "animations": [
+        {"target_id": "obj_id", "type": "fade_in", "duration": 1.0, "params": {}}
+      ]
+    },
+    {
+      "narration": "Notice how this block shifts over here.",
+      "animations": [
+        {"target_id": "obj_id", "type": "shift", "duration": 2.0, "params": {"dx": 3, "dy": 0}}
+      ]
+    }
   ],
   "subconcept_name": "Name of subconcept",
   "difficulty": "school"
@@ -190,7 +192,7 @@ REQUIREMENTS
 8. Keep total scene under 30 seconds.
 9. Make the narration sound like an excited tutor, not a textbook."""
 
-        raw = generate_json(SCENE_SYSTEM_PROMPT, user_prompt, max_tokens=3000)
+        raw = generate_json(SCENE_SYSTEM_PROMPT, user_prompt, max_tokens=8000)
 
         if not raw:
             log.error(f"AI returned no valid JSON for scene: {subconcept.name}")
@@ -201,7 +203,7 @@ REQUIREMENTS
 
         try:
             scene = ScenePlan(**raw)
-            log.info(f"Scene planned: {scene.scene_id} ({len(scene.objects)} objects, {len(scene.animations)} animations, {len(scene.narration)} narration cues)")
+            log.info(f"Scene planned: {scene.scene_id} ({len(scene.objects)} objects, {len(scene.actions)} actions)")
             cache_json("scene", cache_key, scene.model_dump())
             return scene
 
@@ -238,19 +240,29 @@ REQUIREMENTS
                 pos["x"] = max(-6, min(6, pos.get("x", 0)))
                 pos["y"] = max(-4, min(4, pos.get("y", 0)))
 
-        # Fix animation types
-        for anim in raw.get("animations", []):
-            if anim.get("type") not in VALID_ANIM_TYPES:
-                anim["type"] = "fade_in"
-            # Clamp duration
-            try:
-                anim["duration"] = max(0.1, min(10.0, float(anim.get("duration", 1.0))))
-            except (ValueError, TypeError):
-                anim["duration"] = 1.0
+        # Sanitize actions
+        actions = raw.get("actions", [])
+        if not actions:
+            # Fallback action
+            actions = [{
+                "narration": raw.get("title", "Let's explore this concept."),
+                "animations": [{"target_id": "none", "type": "wait", "duration": 2.0}]
+            }]
+            raw["actions"] = actions
 
-        # Ensure narration exists
-        if not raw.get("narration"):
-            raw["narration"] = [{"text": raw.get("title", "Let's explore this concept."), "start_time": 0.5, "emphasis_words": []}]
+        for action in actions:
+            if not isinstance(action.get("narration"), str):
+                action["narration"] = ""
+            
+            # Fix animation types inside actions
+            for anim in action.get("animations", []):
+                if anim.get("type") not in VALID_ANIM_TYPES:
+                    anim["type"] = "fade_in"
+                # Clamp duration
+                try:
+                    anim["duration"] = max(0.1, min(10.0, float(anim.get("duration", 1.0))))
+                except (ValueError, TypeError):
+                    anim["duration"] = 1.0
 
         return raw
 

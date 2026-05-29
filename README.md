@@ -54,6 +54,7 @@ Latency progression:
 * V1 → ~20–30 seconds
 * V2 → ~5–6 seconds
 * V4 → ~300–500ms startup latency
+   *(Note: this can vary depending on the speed of your internet and the speed of your computer)*
 
 ⸻
 

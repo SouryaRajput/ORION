@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 from typing import Optional, Callable
 
-from study.models.scene_schema import ScenePlan, NarrationCue
+from study.models.scene_schema import ScenePlan
 from study.utils.logger import get_logger
 
 log = get_logger("narration_sync")
@@ -38,7 +38,7 @@ class NarrationSyncEngine:
 
     def play_narration(self, scene: ScenePlan, on_complete: Optional[Callable] = None, on_text: Optional[Callable[[str], None]] = None) -> None:
         """Start narration for a scene in a background thread."""
-        if not scene.narration:
+        if not scene.actions:
             log.info("No narration cues for this scene.")
             if on_complete:
                 on_complete()
@@ -49,28 +49,25 @@ class NarrationSyncEngine:
 
         def _worker():
             try:
-                # Sort cues by start time
-                cues = sorted(scene.narration, key=lambda c: c.start_time)
-                start_time = time.time()
-
-                for cue in cues:
+                # The video has audio baked in! We just print the text to the UI as it plays.
+                # Estimate timings roughly based on text length since we don't have exact timestamps.
+                for action in scene.actions:
                     if self._stop_event.is_set():
                         break
 
-                    # Wait until the cue's start time
-                    elapsed = time.time() - start_time
-                    wait_time = cue.start_time - elapsed
-                    if wait_time > 0:
-                        self._stop_event.wait(timeout=wait_time)
-                        if self._stop_event.is_set():
-                            break
+                    text = action.narration
+                    if not text:
+                        continue
 
-                    log.debug(f"Narrating at t={cue.start_time:.1f}s: {cue.text[:50]}...")
+                    log.debug(f"Narrating to UI: {text[:50]}...")
                     if on_text:
-                        on_text(cue.text)
-                    self.tts_fn(cue.text)
+                        on_text(text)
+                    
+                    # Estimate wait time based on reading speed (approx 2.5 words per sec)
+                    wait_time = max(1.0, len(text.split()) / 2.5)
+                    self._stop_event.wait(timeout=wait_time)
 
-                log.info("Narration complete.")
+                log.info("Narration transcript complete.")
             except Exception as e:
                 log.error(f"Narration error: {e}")
             finally:
