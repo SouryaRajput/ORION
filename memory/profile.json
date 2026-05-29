@@ -1,9 +1,9 @@
 {
-  "short_interactions": 76,
-  "long_interactions": 30,
+  "short_interactions": 86,
+  "long_interactions": 32,
   "technical_queries": 0,
-  "casual_queries": 106,
-  "morning_usage": 57,
+  "casual_queries": 118,
+  "morning_usage": 69,
   "evening_usage": 35,
   "late_night_usage": 0,
   "topics": {
