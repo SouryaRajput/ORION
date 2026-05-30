@@ -66,6 +66,7 @@ def run_voice_service():
                 sm.transition(AgentState.LISTENING)
                 continue
 
+            print("\r" + " " * 150 + "\r", end="")
             print("You:", text.strip())
             bus.emit("SPEECH_RECOGNIZED", text.strip())
             continue
@@ -90,5 +91,6 @@ def run_voice_service():
             sm.transition(AgentState.LISTENING)
             continue
 
+        print("\r" + " " * 150 + "\r", end="")
         print("You:", text.strip())
         bus.emit("SPEECH_RECOGNIZED", text.strip())

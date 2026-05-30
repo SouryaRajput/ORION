@@ -1,0 +1,27 @@
+[
+  {
+    "role": "assistant",
+    "content": "You know, same thing, buddy! Get up, stretch, move around. I'm like, repeating myself, but it's just that simple.",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "i'm sorry.",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "No need to apologize, I'm just... you know, trying to help.",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "my leg is aching, what can i do?",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "Well, try elevating it, maybe with a pillow or something. And, uh, take a break from whatever you're doing.",
+    "topic": "general"
+  }
+]

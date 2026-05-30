@@ -35,15 +35,16 @@ Output ONLY valid JSON:
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
             ],
-            temperature=0.0,
-            response_format={"type": "json_object"}
+            temperature=0.0
         )
         content = response.choices[0].message.content.strip()
+        import re
+        content = re.sub(r'```json|```', '', content).strip()
         return json.loads(content)
     except Exception as e:
         print("[INTENT CLASSIFIER ERROR]", e)

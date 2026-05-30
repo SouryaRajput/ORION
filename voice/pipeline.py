@@ -78,7 +78,7 @@ def speech_worker():
 
 threading.Thread(target=speech_worker, daemon=True).start()
 
-def speak_stream(stream):
+def speak_stream(stream, is_urgent=False):
     buffer = ""
     full_reply = ""
     first_token = True
@@ -95,20 +95,37 @@ def speak_stream(stream):
         
         sm.transition(AgentState.SPEAKING)
 
-        while re.search(r'[.!?]\s+', buffer):
-            match = re.search(r'[.!?]\s+', buffer)
+        while re.search(r'[.!?]\s+|,\s+|—\s*|\.\.\.\s*', buffer):
+            match = re.search(r'[.!?]\s+|,\s+|—\s*|\.\.\.\s*', buffer)
+            punctuation = match.group().strip()
             sentence = buffer[:match.end()].strip()
             buffer = buffer[match.end():]
             cleaned = clean_for_speech(clean_response(sentence))
+            
             if cleaned:
+                # Dynamic breath timing based on punctuation
+                pause = 0
+                if '...' in punctuation or '—' in punctuation:
+                    pause = 500
+                elif '?' in punctuation or '!' in punctuation:
+                    pause = 400
+                elif '.' in punctuation:
+                    pause = 350
+                elif ',' in punctuation:
+                    pause = 150
+                    
+                # Modify speed based on urgency
+                if is_urgent:
+                    pause = int(pause * 0.3)
+                    
                 if sm.interrupt_flag: break
-                speak_audio(cleaned)
+                speak_audio(cleaned, pause_ms=pause)
 
     if buffer.strip():
         cleaned = clean_for_speech(clean_response(buffer.strip()))
         if cleaned:
             if not sm.interrupt_flag:
-                speak_audio(cleaned)
+                speak_audio(cleaned, pause_ms=0)
 
     state.LAST_SPOKEN_TIME = time.time()
     
@@ -158,11 +175,26 @@ def handle_speech_recognized(text):
             sm.transition(AgentState.LISTENING)
         return
 
-    # 2. Intent Router
-    from Core.intent import classify_intent
-    intent_data = classify_intent(text)
-    tracker.mark_checkpoint("Intent Router (LLM)")
+    # 2. Intent Router (Keyword Heuristic to save 1000ms)
+    # Only run the heavy LLM intent router if trigger words are present
+    trigger_words = [
+        "screen", "click", "type", "press", "read", "look", 
+        "open", "launch", "close", "workspace", 
+        "study", "simulate", "animate", "teach",
+        "search", "news", "weather", 
+        "server", "deploy", "dns", "database", "check"
+    ]
     
+    needs_router = any(word in text.lower() for word in trigger_words)
+    
+    if needs_router:
+        from Core.intent import classify_intent
+        intent_data = classify_intent(text)
+        tracker.mark_checkpoint("Intent Router (LLM)")
+    else:
+        intent_data = {"intent": "general", "target": "", "action_type": ""}
+        tracker.mark_checkpoint("Intent Router (Skipped)")
+        
     intent = intent_data.get("intent", "general")
     target = intent_data.get("target", "")
     action_type = intent_data.get("action_type", "")
@@ -330,17 +362,19 @@ def handle_intent(data):
         return
 
     # If it's a general intent, delegate to AI
-    if len(text.split()) > 2:
-        speech_queue.put(get_ack())
 
     sm.interrupt_flag = False
     sm.pipeline_active = True
     
+    # Fast 0ms semantic detection for dynamics
+    is_urgent = any(word in text.lower() for word in ["quick", "fast", "urgent", "hurry", "now", "emergency", "speed"])
+    mood = "angry" if any(word in text.lower() for word in ["hate", "stupid", "annoying", "idiot"]) else "neutral"
+    
     try:
-        result = delegate(text, stream=True)
+        result = delegate(text, stream=True, is_urgent=is_urgent, mood=mood)
 
         if isinstance(result, types.GeneratorType):
-            raw_reply = speak_stream(result)
+            raw_reply = speak_stream(result, is_urgent=is_urgent)
             reply = limit_response(clean_response(raw_reply)) if raw_reply else ""
         elif isinstance(result, dict):
             reply = clean_response(result.get("reply", ""))

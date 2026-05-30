@@ -260,6 +260,7 @@ class TranscriptView(QTextEdit):
         self._scroll()
 
     def add_user_message(self, text: str):
+        self._remove_partial()
         self.append(
             f'<p style="margin:12px 0; font-size:14px;">'
             f'<span style="color:#0D9488; font-weight:700;">You</span> '
@@ -267,6 +268,25 @@ class TranscriptView(QTextEdit):
             f'<br/><span style="color:#1F4D48;">{text}</span></p>'
         )
         self._scroll()
+
+    def update_user_partial(self, text: str):
+        self._remove_partial()
+        self.append(
+            f'<p id="partial" style="margin:12px 0; font-size:14px; opacity:0.6;">'
+            f'<span style="color:#0D9488; font-weight:700; opacity:0.6;">You (listening...)</span> '
+            f'<br/><span style="color:#1F4D48; font-style:italic;">{text}</span></p>'
+        )
+        self._has_partial = True
+        self._scroll()
+
+    def _remove_partial(self):
+        if getattr(self, "_has_partial", False):
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock, QTextCursor.MoveMode.KeepAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.Up, QTextCursor.MoveMode.KeepAnchor)
+            cursor.removeSelectedText()
+            self._has_partial = False
 
     def add_system_message(self, text: str):
         self.append(
@@ -572,6 +592,8 @@ class OrionMainWindow(QMainWindow):
             self.bot_speech_label.setText(text)
         elif role == "user":
             self.transcript.add_user_message(text)
+        elif role == "user_partial":
+            self.transcript.update_user_partial(text)
         else:
             self.transcript.add_system_message(text)
 

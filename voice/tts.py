@@ -63,11 +63,13 @@ def audio_player():
             continue
 
         try:
-            # Configure ffplay based on format
+            # Configure ffplay based on format with ultra-low latency flags
             if format_flag == "f32le":
-                ffplay_cmd = ["ffplay", "-f", "f32le", "-ar", "24000", "-ac", "1", "-nodisp", "-autoexit", "-i", "pipe:0"]
+                ffplay_cmd = ["ffplay", "-fflags", "nobuffer", "-flags", "low_delay", "-f", "f32le", "-ar", "24000", "-ac", "1", "-nodisp", "-autoexit", "-i", "pipe:0"]
+            elif format_flag == "mp3":
+                ffplay_cmd = ["ffplay", "-fflags", "nobuffer", "-flags", "low_delay", "-f", "mp3", "-nodisp", "-autoexit", "-i", "pipe:0"]
             else:
-                ffplay_cmd = ["ffplay", "-nodisp", "-autoexit", "-i", "pipe:0"]
+                ffplay_cmd = ["ffplay", "-fflags", "nobuffer", "-flags", "low_delay", "-nodisp", "-autoexit", "-i", "pipe:0"]
 
             process = subprocess.Popen(
                 ffplay_cmd,
@@ -134,164 +136,130 @@ threading.Thread(target=audio_player, daemon=True).start()
 
 
 # ============================================================
-# ENGINE 1: EDGE TTS (FREE, STREAMING)
+# ENGINE 3: ELEVENLABS (EMOTIVE, FAST TURBO)
 # ============================================================
 
-async def _edge_tts_stream(text, byte_stream, cache_file):
-    """Uses Microsoft Edge neural TTS. Streams MP3 chunks in real-time."""
-    import edge_tts
+import requests
+import threading
+import time
+import random
 
-    full_audio = b""
-    communicate = edge_tts.Communicate(text, EDGE_VOICE, rate="+5%", pitch="+0Hz")
-
-    async for chunk_data in communicate.stream():
-        if sm.interrupt_flag:
-            break
-        if chunk_data["type"] == "audio":
-            audio_bytes = chunk_data["data"]
-            byte_stream.put(audio_bytes)
-            full_audio += audio_bytes
-
-    byte_stream.put(None)  # EOF
-
-    if not sm.interrupt_flag and full_audio:
-        try:
-            with open(cache_file, "wb") as f:
-                f.write(full_audio)
-        except Exception:
-            pass
-
-
-def _run_edge_tts(text, byte_stream, cache_file):
-    """Run the async edge-tts in a new event loop (thread-safe)."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(_edge_tts_stream(text, byte_stream, cache_file))
-    finally:
-        loop.close()
-
-
-# ============================================================
-# ENGINE 2: ELEVENLABS (PREMIUM, STREAMING + EMOTION)
-# ============================================================
+elevenlabs_session = requests.Session()
+elevenlabs_semaphore = threading.Semaphore(4)
 
 def _run_elevenlabs_tts(text, byte_stream, cache_file):
-    """Uses ElevenLabs API with key rotation and emotion detection."""
-    from elevenlabs.client import ElevenLabs
-    from voice.key_manager import get_key, get_voice, rotate_key
-    from voice.emotion import get_voice_settings
-
-    voice_settings = get_voice_settings(text)
-
-    retries = 0
-    MAX_RETRIES = 4
-
-    while retries < MAX_RETRIES:
-        try:
-            api_key = get_key()
-            voice_id = get_voice()
-
-            if not api_key or not voice_id:
-                print("[TTS] No ElevenLabs keys configured. Falling back to Edge TTS.")
-                _run_edge_tts(text, byte_stream, cache_file)
-                return
-
-            client = ElevenLabs(api_key=api_key)
-
-            audio_stream = client.text_to_speech.convert(
-                text=text,
-                voice_id=voice_id,
-                model_id="eleven_turbo_v2",
-                voice_settings=voice_settings,
-                output_format="mp3_44100_128"
-            )
-
+    """Uses ElevenLabs turbo-v2.5 for fast and highly emotional TTS."""
+    keys = [os.getenv(f"ELEVEN_API_KEY_{i}") for i in range(1, 5)]
+    voice_ids = [os.getenv(f"ELEVEN_VOICE_ID_{i}") for i in range(1, 5)]
+    
+    valid = [(k, v) for k, v in zip(keys, voice_ids) if k and v]
+    if not valid:
+        print("[TTS] No ElevenLabs keys configured.")
+        byte_stream.put(None)
+        return
+        
+    api_key, voice_id = random.choice(valid)
+    
+    try:
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?optimize_streaming_latency=4"
+        
+        headers = {
+            "xi-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "text": text,
+            "model_id": "eleven_turbo_v2_5",
+            "output_format": "mp3_44100_128"
+        }
+        
+        with elevenlabs_semaphore:
+            response = elevenlabs_session.post(url, headers=headers, json=payload, stream=True)
+            if response.status_code == 429:
+                time.sleep(0.5)
+                response = elevenlabs_session.post(url, headers=headers, json=payload, stream=True)
+            response.raise_for_status()
+            
             full_audio = b""
-            for chunk in audio_stream:
+            for chunk in response.iter_content(chunk_size=4096):
                 if sm.interrupt_flag:
                     break
-                byte_stream.put(chunk)
-                full_audio += chunk
-
-            byte_stream.put(None)  # EOF
-
+                if chunk:
+                    byte_stream.put(chunk)
+                    full_audio += chunk
+                    
+            byte_stream.put(None)
+            
             if not sm.interrupt_flag and full_audio:
                 try:
                     with open(cache_file, "wb") as f:
                         f.write(full_audio)
                 except Exception:
                     pass
-
-            return
-
-        except Exception as e:
-            error = str(e).lower()
-
-            if any(err in error for err in ["quota", "limit", "payment", "unauthorized", "invalid", "unauthenticated", "unusual"]):
-                print(f"[TTS] Key blocked. Rotating...")
-                old_key = api_key
-                rotate_key()
-
-                # If rotation gave us the same key back, fall back to Edge
-                if get_key() == old_key:
-                    print("[TTS] All ElevenLabs keys exhausted. Falling back to Edge TTS.")
-                    _run_edge_tts(text, byte_stream, cache_file)
-                    return
-
-                retries += 1
-                continue
-
-            print("[TTS ERROR]", e)
-            print("[TTS] Falling back to Edge TTS.")
-            _run_edge_tts(text, byte_stream, cache_file)
-            return
-
-    print("[TTS] Max retries hit. Falling back to Edge TTS.")
-    _run_edge_tts(text, byte_stream, cache_file)
+                    
+    except Exception as e:
+        print(f"[ELEVENLABS TTS ERROR] {e}")
+        byte_stream.put(None)
 
 
 # ============================================================
-# ENGINE 3: KOKORO LOCAL TTS (OPEN-WEIGHTS, HIGH QUALITY)
+# ENGINE 4: DEEPGRAM (ULTRA-LOW LATENCY, STREAMING)
 # ============================================================
 
-def _run_kokoro_tts(text, byte_stream, cache_file):
-    """Runs the Kokoro TTS model using a4f_local (OpenAI API format)."""
-    try:
-        from a4f_local import A4F
-    except ImportError:
-        print("[TTS ERROR] a4f_local not found. Please run: pip install a4f-local")
-        print("[TTS] Falling back to Edge TTS.")
-        _run_edge_tts(text, byte_stream, cache_file)
+import requests
+import threading
+import time
+
+deepgram_session = requests.Session()
+deepgram_semaphore = threading.Semaphore(4)
+
+def _run_deepgram_tts(text, byte_stream, cache_file):
+    """Uses Deepgram Aura TTS. Extremely fast streaming with high quality."""
+    DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+    if not DEEPGRAM_API_KEY:
+        print("[TTS] No Deepgram key configured.")
+        byte_stream.put(None)
         return
-
+        
     try:
-        client = A4F()
+        url = f"https://api.deepgram.com/v1/speak?model=aura-asteria-en"
+        headers = {
+            "Authorization": f"Token {DEEPGRAM_API_KEY}",
+            "Content-Type": "application/json"
+        }
         
-        # a4f_local returns raw audio bytes (mp3 format)
-        audio_bytes = client.audio.speech.create(
-            model="tts-1",
-            input=text,
-            voice="nova"
-        )
-        
-        if audio_bytes:
-            byte_stream.put(audio_bytes)
+        with deepgram_semaphore:
+            # Use persistent session to eliminate TLS handshake latency on subsequent TTS calls
+            response = deepgram_session.post(url, headers=headers, json={"text": text}, stream=True)
             
-        byte_stream.put(None) # EOF
-        
-        if not sm.interrupt_flag and audio_bytes:
-            try:
-                with open(cache_file, "wb") as f:
-                    f.write(audio_bytes)
-            except Exception:
-                pass
+            # Simple retry mechanism for 429 rate limits
+            if response.status_code == 429:
+                time.sleep(0.5)
+                response = deepgram_session.post(url, headers=headers, json={"text": text}, stream=True)
+                
+            response.raise_for_status()
+            
+            full_audio = b""
+            for chunk in response.iter_content(chunk_size=4096):
+                if sm.interrupt_flag:
+                    break
+                if chunk:
+                    byte_stream.put(chunk)
+                    full_audio += chunk
+                    
+            byte_stream.put(None) # EOF
+            
+            if not sm.interrupt_flag and full_audio:
+                try:
+                    with open(cache_file, "wb") as f:
+                        f.write(full_audio)
+                except Exception:
+                    pass
                 
     except Exception as e:
-        print("[KOKORO TTS ERROR]", e)
-        print("[TTS] Falling back to Edge TTS.")
-        _run_edge_tts(text, byte_stream, cache_file)
-
+        print(f"[DEEPGRAM TTS ERROR] {e}")
+        byte_stream.put(None)
 
 # ============================================================
 # MAIN TTS FUNCTION (NON-BLOCKING)
@@ -321,7 +289,10 @@ def speak_audio(text, pause_ms=0):
             # CACHE CHECK
             # -----------------------
 
-            engine_tag = TTS_ENGINE
+            if TTS_ENGINE == "deepgram":
+                engine_tag = "deepgram_mp3"
+            else:
+                engine_tag = TTS_ENGINE
             key_hash = hashlib.md5(f"{text}_{engine_tag}".encode()).hexdigest()
             format_flag = "mp3"
             
@@ -352,10 +323,8 @@ def speak_audio(text, pause_ms=0):
 
             if TTS_ENGINE == "elevenlabs":
                 _run_elevenlabs_tts(text, byte_stream, cache_file)
-            elif TTS_ENGINE == "kokoro":
-                _run_kokoro_tts(text, byte_stream, cache_file)
             else:
-                _run_edge_tts(text, byte_stream, cache_file)
+                _run_deepgram_tts(text, byte_stream, cache_file)
 
         except Exception as e:
             print("[TTS WORKER ERROR]", e)

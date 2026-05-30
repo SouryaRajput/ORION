@@ -1,62 +1,72 @@
 [
   {
     "role": "user",
-    "content": "[Context: from sleep | sleep deprivation, like, really messes with hormone levels \u2014 especially cortisol and insulin, you know, it's a big deal...]\nFollow-up question: how do you prevent",
-    "topic": "general"
-  },
-  {
-    "role": "assistant",
-    "content": "establishing a consistent sleep schedule, like, going to bed and waking up at the same time every day \u2014 that helps regulate those hormones, you know...",
-    "topic": "general"
-  },
-  {
-    "role": "user",
-    "content": "going to bed and waiting.",
-    "topic": "general"
-  },
-  {
-    "role": "assistant",
-    "content": "having a bedtime routine, like, reading a book or something, to help you wind down \u2014 it makes a big difference, you know...",
-    "topic": "general"
-  },
-  {
-    "role": "user",
     "content": "thank you.",
     "topic": "general"
   },
   {
     "role": "assistant",
-    "content": "no problem, have a great day, by the way...",
+    "content": "bye...",
     "topic": "general"
   },
   {
     "role": "user",
-    "content": "what's an integral of x",
+    "content": "where is the black hole?",
     "topic": "general"
   },
   {
     "role": "assistant",
-    "content": "the integral of x, uh, is x squared, over 2, you know...",
+    "content": "uh, there are several... like, the one near the galaxy Messier 87 is pretty famous, but there are others, too...",
     "topic": "general"
   },
   {
     "role": "user",
-    "content": "what is 20 times 20?",
-    "topic": "productivity"
-  },
-  {
-    "role": "assistant",
-    "content": "that's an easy one, 20 times 20, like, is 400, yeah...",
-    "topic": "productivity"
-  },
-  {
-    "role": "user",
-    "content": "thank you.",
+    "content": "nah, we tell them not to get it.",
     "topic": "general"
   },
   {
     "role": "assistant",
-    "content": "no worries, anytime...",
+    "content": "you're talking about Cygnus X-1... that's a suspected black hole, but it's still a bit of a mystery...",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "where's the black hole?",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "Cygnus X-1 is in the constellation Cygnus, near the Earth...",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "you disturbed me again.",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "sorry about that... I'll try to keep it light...",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "i'm sorry.",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "no need to be sorry... it's late, I'll chill...",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "what is a black hole?",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "uh, a black hole is like a vacuum in space... it sucks everything in, nothing escapes...",
     "topic": "general"
   }
 ]

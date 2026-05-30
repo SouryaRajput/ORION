@@ -1,6 +1,48 @@
 {
-    "profile": {},
-    "prefrences": {},
-    "habits": {},
-    "notes": {}
+  "profile": {},
+  "prefrences": {},
+  "habits": {},
+  "notes": {},
+  "historical_context": {
+    "Wormholes are theoretical, requiring negative energy to maintain, and could be linked to quantum entanglement or gravitational waves.": {
+      "value": "Context tags: wormholes, black holes, general relativity, quantum entanglement, gravitational waves, Event Horizon Telescope, information paradox",
+      "timestamp": 1780128842.3152928,
+      "importance": 1.0
+    },
+    "Black holes are a solid theory, observed through X-rays, gamma rays, and imaged by the Event Horizon Telescope, though the information paradox remains a question.": {
+      "value": "Context tags: wormholes, black holes, general relativity, quantum entanglement, gravitational waves, Event Horizon Telescope, information paradox",
+      "timestamp": 1780128842.316009,
+      "importance": 1.0
+    },
+    "User is experiencing leg pain from prolonged sitting.": {
+      "value": "Context tags: leg pain, sitting for too long, stretching, ergonomics",
+      "timestamp": 1780129664.8830562,
+      "importance": 1.0
+    },
+    "Assistant provided initial suggestions for stretching and movement.": {
+      "value": "Context tags: leg pain, sitting for too long, stretching, ergonomics",
+      "timestamp": 1780129664.88401,
+      "importance": 1.0
+    },
+    "User's follow-up implied the issue was widespread, leading to more systemic advice.": {
+      "value": "Context tags: leg pain, sitting for too long, stretching, ergonomics",
+      "timestamp": 1780129664.884607,
+      "importance": 1.0
+    },
+    "Assistant suggested regular breaks, ergonomic adjustments, and desk stretches.": {
+      "value": "Context tags: leg pain, sitting for too long, stretching, ergonomics",
+      "timestamp": 1780129664.88508,
+      "importance": 1.0
+    },
+    "Assistant provided advice on stretching, movement, and ergonomic adjustments.": {
+      "value": "Context tags: leg pain, sitting for too long, stretching, ergonomics, movement",
+      "timestamp": 1780129664.923328,
+      "importance": 1.0
+    },
+    "The user's follow-up question about 'nationwide' was misinterpreted by the assistant as referring to the leg pain being widespread, not the advice.": {
+      "value": "Context tags: leg pain, sitting for too long, stretching, ergonomics, movement",
+      "timestamp": 1780129664.9239051,
+      "importance": 1.0
+    }
+  }
 }

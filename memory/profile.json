@@ -1,12 +1,36 @@
 {
-  "short_interactions": 94,
-  "long_interactions": 32,
-  "technical_queries": 0,
-  "casual_queries": 126,
-  "morning_usage": 69,
-  "evening_usage": 40,
-  "late_night_usage": 0,
+  "short_interactions": {
+    "count": 115,
+    "last_observed": 1780129341.72596
+  },
+  "long_interactions": {
+    "count": 42,
+    "last_observed": 1780129654.757955
+  },
+  "technical_queries": {
+    "count": 0,
+    "last_observed": 1780128820.5098932
+  },
+  "casual_queries": {
+    "count": 157,
+    "last_observed": 1780129654.757955
+  },
+  "morning_usage": {
+    "count": 79,
+    "last_observed": 1780128820.5098948
+  },
+  "evening_usage": {
+    "count": 50,
+    "last_observed": 1780128820.509896
+  },
+  "late_night_usage": {
+    "count": 6,
+    "last_observed": 1780128820.509897
+  },
   "topics": {
-    "casual_chat": 7
+    "casual_chat": {
+      "count": 7,
+      "last_observed": 1780128820.5099
+    }
   }
 }

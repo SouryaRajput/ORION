@@ -66,7 +66,7 @@ def think(text):
 # MAIN DELEGATE FUNCTION
 # -----------------------
 
-def delegate(text: str, stream=False):
+def delegate(text: str, stream=False, is_urgent=False, mood="neutral"):
 
     text = text.strip().lower()
 
@@ -153,7 +153,7 @@ def delegate(text: str, stream=False):
     # -------------------
 
     if stream and decision not in ["system", "short"]:
-        return ai_reply_stream(text)
+        return ai_reply_stream(text, is_urgent=is_urgent, mood=mood)
 
     # -------------------
     # 10. PLANNING

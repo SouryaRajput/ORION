@@ -17,15 +17,17 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     print("⚠️ WARNING: GROQ_API_KEY is not set in .env")
 
-# Use Groq client for absolute lowest latency
-groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-MODEL_NAME = "llama-3.3-70b-versatile"
+import httpx
+# Use Groq client for absolute lowest latency with ultra-long keepalive
+http_client = httpx.Client(limits=httpx.Limits(keepalive_expiry=3600.0, max_keepalive_connections=10))
+groq_client = Groq(api_key=GROQ_API_KEY, http_client=http_client) if GROQ_API_KEY else None
+MODEL_NAME = "llama-3.1-8b-instant"
 
 # --------------------------------------------------
 # STREAMING RESPONSE (voice + web)
 # --------------------------------------------------
 
-def ai_reply_stream(text):
+def ai_reply_stream(text, is_urgent=False, mood="neutral"):
 
     # Run the Thinking Layer
     context_packet = think_before_reply(text)
@@ -34,6 +36,8 @@ def ai_reply_stream(text):
     system_prompt += f"""\n
 SITUATIONAL AWARENESS:
 {context_packet['time_context']}
+USER URGENCY: {'HIGH (Speak fast, use no filler words, be direct)' if is_urgent else 'NORMAL'}
+USER MOOD: {mood.upper()}
 
 USER PROFILE:
 {context_packet['profile']}

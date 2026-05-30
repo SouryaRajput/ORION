@@ -84,6 +84,17 @@ def listen():
 
             last_wake_time = time.time()
             print("🔥 Wake detected")
+            
+            # WARM UP LLM CONNECTION (Parallel preemptive TLS handshake)
+            def _warm_llm():
+                try:
+                    from Core.ai import groq_client
+                    if groq_client:
+                        groq_client.models.list()
+                except:
+                    pass
+            import threading
+            threading.Thread(target=_warm_llm, daemon=True).start()
 
             state.WAKE_TRIGGERED = True
             state.INTERRUPT = True
@@ -146,6 +157,8 @@ def listen():
                 speech_started = True
                 # 🔥 include pre-roll at speech start
                 audio_buffer.extend(pre_buffer)
+                listen.last_partial_time = time.time()
+                listen.partial_in_progress = False
 
             silence_frames = 0
             audio_buffer.append(pcm)
@@ -157,10 +170,43 @@ def listen():
                 audio_buffer.append(pcm)
 
         # -----------------------
+        # PARTIAL STT STREAMING
+        # -----------------------
+        if speech_started and (time.time() - getattr(listen, "last_partial_time", 0)) > 0.6:
+            if len(audio_buffer) * FRAME_SIZE / config.voice.rate > 0.6:
+                if not getattr(listen, "partial_in_progress", False):
+                    listen.last_partial_time = time.time()
+                    listen.partial_in_progress = True
+                    
+                    audio_data_partial = b"".join(list(audio_buffer))
+                    
+                    def _do_partial(audio_bytes):
+                        try:
+                            import numpy as np
+                            audio_np_p = (
+                                np.frombuffer(audio_bytes, dtype=np.int16)
+                                .astype(np.float32) / 32768.0
+                            )
+                            from voice.input_groq import transcribe_audio
+                            text = transcribe_audio(audio_np_p)
+                            if text and speech_started: # Only send if still speaking
+                                from voice.pipeline import _send_to_ui
+                                _send_to_ui("user_partial", text)
+                                print(f"\r\033[90m[Partial] {text}\033[0m", end="", flush=True)
+                        except Exception as e:
+                            pass
+                        finally:
+                            listen.partial_in_progress = False
+
+                    import threading
+                    threading.Thread(target=_do_partial, args=(audio_data_partial,), daemon=True).start()
+
+        # -----------------------
         # END OF SPEECH
         # -----------------------
 
-        if speech_started and silence_frames > 8:
+        # Wait for ~1.28 seconds of silence (40 frames * 32ms) to avoid cutting off user mid-sentence
+        if speech_started and silence_frames > 40:
             
             # 🔥 Ignore ultra-short blips (e.g. typing, breathing) < 0.5s
             if len(audio_buffer) < (config.voice.rate * 0.5) / FRAME_SIZE:
