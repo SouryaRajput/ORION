@@ -31,6 +31,8 @@ def ai_reply_stream(text, is_urgent=False, mood="neutral"):
 
     # Run the Thinking Layer
     context_packet = think_before_reply(text)
+    from Core.latency import tracker
+    tracker.mark_checkpoint_once("LLM Context Ready")
     
     system_prompt = get_system_prompt()
     system_prompt += f"""\n
@@ -71,6 +73,7 @@ CRITICAL VOICE RULES (HYPER-REALISTIC ACTING):
         return
 
     try:
+        tracker.mark_checkpoint_once("LLM Request Start")
         stream = groq_client.chat.completions.create(
             model=MODEL_NAME,
             messages=messages,

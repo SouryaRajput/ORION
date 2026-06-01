@@ -9,6 +9,7 @@ soundfile
 # AI & LLM APIs
 groq
 requests
+sentence-transformers
 
 # Environment
 python-dotenv

@@ -87,7 +87,7 @@ def speak_stream(stream, is_urgent=False):
         
         if first_token:
             from Core.latency import tracker
-            tracker.mark_checkpoint("LLM (Time To First Token)")
+            tracker.mark_checkpoint_once("LLM (Time To First Token)")
             first_token = False
             
         full_reply += chunk
@@ -119,12 +119,16 @@ def speak_stream(stream, is_urgent=False):
                     pause = int(pause * 0.3)
                     
                 if sm.interrupt_flag: break
+                from Core.latency import tracker
+                tracker.mark_checkpoint_once("First TTS Submit")
                 speak_audio(cleaned, pause_ms=pause)
 
     if buffer.strip():
         cleaned = clean_for_speech(clean_response(buffer.strip()))
         if cleaned:
             if not sm.interrupt_flag:
+                from Core.latency import tracker
+                tracker.mark_checkpoint_once("First TTS Submit")
                 speak_audio(cleaned, pause_ms=0)
 
     state.LAST_SPOKEN_TIME = time.time()
@@ -145,6 +149,13 @@ def handle_speech_recognized(text):
 
     with speech_queue.mutex:
         speech_queue.queue.clear()
+
+    # Before processing new input, read out any pending notifications
+    from agents.background import BackgroundManager
+    pending = BackgroundManager.check_pending()
+    for notif in pending:
+        summary = notif.result[:150] if notif.result else "completed"
+        speech_queue.put(f"By the way, regarding {notif.name}, it finished: {summary}")
 
     now = time.time()
     if now - state.LAST_TEXT_TIME < state.MIN_TEXT_INTERVAL:
@@ -359,6 +370,35 @@ def handle_intent(data):
                 sm.pipeline_active = False
 
         threading.Thread(target=_run_dynamic_action, daemon=True, name="dynamic-action").start()
+        return
+
+    elif intent == "agentic_task":
+        goal = target if target else text
+        speech_queue.put("Got it. I'll work on that in the background.")
+        
+        from agents.background import BackgroundManager
+        task_id = BackgroundManager.submit(
+            name="Agent Task", 
+            goal=goal,
+            priority="normal"
+        )
+        print(f"[PIPELINE] Submitted background task {task_id}")
+        return
+
+    elif intent == "scheduled_task":
+        goal = target if target else text
+        speech_queue.put("Setting up that schedule for you.")
+        
+        # Parse and add the schedule in background so we don't block voice
+        def _setup_schedule():
+            from agents.scheduler import parse_schedule_from_text
+            import voice.service as service
+            
+            job = parse_schedule_from_text(goal)
+            service.scheduler.add_job(job)
+            speech_queue.put(f"Scheduled: {job.name}.")
+            
+        threading.Thread(target=_setup_schedule, daemon=True, name="schedule-setup").start()
         return
 
     # If it's a general intent, delegate to AI

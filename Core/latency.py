@@ -18,6 +18,15 @@ class LatencyTracker:
         if self._is_active and self._start_time is not None:
             self._checkpoints[name] = time.perf_counter()
 
+    def mark_checkpoint_once(self, name: str):
+        """Mark the first occurrence of an event during the active request."""
+        if (
+            self._is_active
+            and self._start_time is not None
+            and name not in self._checkpoints
+        ):
+            self._checkpoints[name] = time.perf_counter()
+
     def end_tracking_and_report(self):
         """Called when audio begins playing."""
         if not self._is_active or self._start_time is None:

@@ -135,7 +135,7 @@ def delegate(text: str, stream=False, is_urgent=False, mood="neutral"):
     # 7. CACHE
     # -------------------
 
-    cached = get_cached_answer(text)
+    cached = get_cached_answer(text, semantic=not stream)
     if cached:
         return cached
 

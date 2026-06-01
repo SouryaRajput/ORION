@@ -5,6 +5,12 @@ from voice.input_groq import transcribe_audio
 from Core.state_machine import sm, AgentState
 from Core.events import bus
 import voice.pipeline # Initialize event handlers
+import Core.web_searcher # Preload heavy libraries to eliminate 1000ms import latency
+
+from agents.scheduler import Scheduler
+from agents.background import BackgroundManager
+
+scheduler = Scheduler()
 
 
 def _start_ui_listener():
@@ -25,6 +31,16 @@ def _start_ui_listener():
 
 def run_voice_service():
     print("ORION voice system is online.")
+    
+    # Start Agentic Infrastructure
+    from voice.tts import speak_audio
+    BackgroundManager.set_notify_fn(speak_audio)
+    scheduler.start()
+    
+    # Preload the semantic cache model to eliminate the 25s cold-start latency
+    import memory.cache as cache
+    cache.preload_model()
+    
     sm.transition(AgentState.SLEEPING)
     _start_ui_listener()
 
@@ -42,7 +58,8 @@ def run_voice_service():
                     print("💤 Idle timeout. Going to sleep.")
                     sm.transition(AgentState.SLEEPING)
 
-        audio = listen()
+        result = listen()
+        audio, early_txt = result if result else (None, None)
 
         if audio is None and not state.WAKE_TRIGGERED:
             continue
@@ -57,7 +74,7 @@ def run_voice_service():
             sm.transition(AgentState.PROCESSING)
             
             print("🎤 Capturing query...")
-            text = transcribe_audio(audio)
+            text = early_txt if early_txt else transcribe_audio(audio)
             
             from Core.latency import tracker
             tracker.mark_checkpoint("STT Engine")
@@ -82,7 +99,7 @@ def run_voice_service():
         print("🧠 Processing...")
         sm.transition(AgentState.PROCESSING)
 
-        text = transcribe_audio(audio)
+        text = early_txt if early_txt else transcribe_audio(audio)
         
         from Core.latency import tracker
         tracker.mark_checkpoint("STT Engine")

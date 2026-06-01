@@ -115,12 +115,12 @@ def listen():
                 if now - sm.followup_start_time > config.voice.auto_sleep_followup_timeout:
                     print("💤 Follow-up timeout. Going to sleep.")
                     sm.transition(AgentState.SLEEPING)
-                    return None
+                    return None, None
             else:
                 if now - sm.last_engaged_time > config.voice.auto_sleep_idle_timeout:
                     print("💤 Idle timeout. Going to sleep.")
                     sm.transition(AgentState.SLEEPING)
-                    return None
+                    return None, None
 
         # If we are sleeping and no wake word was triggered, drop audio
         if sm.current == AgentState.SLEEPING and not state.WAKE_TRIGGERED:
@@ -202,6 +202,28 @@ def listen():
                     threading.Thread(target=_do_partial, args=(audio_data_partial,), daemon=True).start()
 
         # -----------------------
+        # EARLY SPECULATIVE STT
+        # -----------------------
+        if speech_started and silence_frames == 20: # ~640ms silence, high probability speech is over
+            import concurrent.futures
+            if not hasattr(listen, "stt_executor"):
+                listen.stt_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+            def _early_stt():
+                try:
+                    audio_data_early = b"".join(list(audio_buffer))
+                    audio_np_early = (
+                        np.frombuffer(audio_data_early, dtype=np.int16)
+                        .astype(np.float32) / 32768.0
+                    )
+                    from voice.input_groq import transcribe_audio
+                    return transcribe_audio(audio_np_early)
+                except Exception:
+                    return None
+            
+            listen.early_future = listen.stt_executor.submit(_early_stt)
+
+        # -----------------------
         # END OF SPEECH
         # -----------------------
 
@@ -222,9 +244,18 @@ def listen():
                 .astype(np.float32) / 32768.0
             )
 
+            # Await early STT to finish if it's still running
+            early_txt = None
+            if getattr(listen, "early_future", None):
+                try:
+                    early_txt = listen.early_future.result(timeout=1.0)
+                except Exception:
+                    pass
+            listen.early_future = None
+
             from Core.latency import tracker
             tracker.mark_end_of_speech()
-            return audio_np
+            return audio_np, early_txt
 
         # -----------------------
         # SAFETY TIMEOUT (~4 sec)
@@ -241,4 +272,4 @@ def listen():
 
             from Core.latency import tracker
             tracker.mark_end_of_speech()
-            return audio_np
+            return audio_np, None

@@ -43,6 +43,226 @@
       "value": "Context tags: leg pain, sitting for too long, stretching, ergonomics, movement",
       "timestamp": 1780129664.9239051,
       "importance": 1.0
+    },
+    "User has an aching leg.": {
+      "value": "Context tags: leg pain, remedies",
+      "timestamp": 1780141446.0819871,
+      "importance": 1.0
+    },
+    "Assistant suggested elevating the leg and taking a break.": {
+      "value": "Context tags: leg pain, remedies",
+      "timestamp": 1780141446.084171,
+      "importance": 1.0
+    },
+    "User is experiencing back pain from sitting too long.": {
+      "value": "Context tags: back pain, sitting posture, ergonomics, stretching, physical activity",
+      "timestamp": 1780149086.727988,
+      "importance": 1.0
+    },
+    "Assistant previously advised regular breaks, ergonomic adjustments, and desk stretches.": {
+      "value": "Context tags: back pain, sitting posture, ergonomics, stretching, physical activity",
+      "timestamp": 1780149086.7297091,
+      "importance": 1.0
+    },
+    "Assistant recommends short walks for relief.": {
+      "value": "Context tags: back pain, sitting posture, ergonomics, stretching, physical activity",
+      "timestamp": 1780149086.7311559,
+      "importance": 1.0
+    },
+    "Assistant previously advised on regular breaks, ergonomic adjustments, and desk stretches.": {
+      "value": "Context tags: back pain, ergonomics, stretching, physical activity, well-being",
+      "timestamp": 1780149086.905069,
+      "importance": 1.0
+    },
+    "Assistant suggested taking short walks as an additional remedy.": {
+      "value": "Context tags: back pain, ergonomics, stretching, physical activity, well-being",
+      "timestamp": 1780149086.906024,
+      "importance": 1.0
+    },
+    "User asked about the assistant's well-being.": {
+      "value": "Context tags: back pain, ergonomics, stretching, physical activity, well-being",
+      "timestamp": 1780149086.906966,
+      "importance": 1.0
+    },
+    "The user asked for the fastest way to win an Uno match.": {
+      "value": "Context tags: Uno strategy, Bitcoin price",
+      "timestamp": 1780303029.1507788,
+      "importance": 1.0
+    },
+    "The assistant provided a strategy for Uno focusing on quickly playing matching cards, using Wild cards, and prioritizing clearing one's own hand.": {
+      "value": "Context tags: Uno strategy, Bitcoin price",
+      "timestamp": 1780303029.154063,
+      "importance": 1.0
+    },
+    "The user then abruptly changed the topic to ask about the current Bitcoin price.": {
+      "value": "Context tags: Uno strategy, Bitcoin price",
+      "timestamp": 1780303029.156939,
+      "importance": 1.0
+    },
+    "The assistant provided a strategy for winning Uno quickly: focus on playing matching cards or Wild cards to clear your hand, rather than blocking opponents.": {
+      "value": "Context tags: Uno strategy, Bitcoin price",
+      "timestamp": 1780303029.246569,
+      "importance": 1.0
+    },
+    "The assistant provided the current Bitcoin price as approximately $38,500, noting its volatility.": {
+      "value": "Context tags: Uno strategy, Bitcoin price",
+      "timestamp": 1780303029.24836,
+      "importance": 1.0
+    },
+    "Bitcoin price was initially $38,500, then rose to $39,000.": {
+      "value": "Context tags: Bitcoin price, Ethereum price, cryptocurrency fluctuations",
+      "timestamp": 1780303483.4003541,
+      "importance": 1.0
+    },
+    "Ethereum price is around $2,800.": {
+      "value": "Context tags: Bitcoin price, Ethereum price, cryptocurrency fluctuations",
+      "timestamp": 1780303483.401195,
+      "importance": 1.0
+    },
+    "Cryptocurrency prices are highly volatile.": {
+      "value": "Context tags: Bitcoin price, Ethereum price, cryptocurrency fluctuations",
+      "timestamp": 1780303483.402112,
+      "importance": 1.0
+    },
+    "User asked about 'Tien Sopa Cheese' but provided no further context.": {
+      "value": "Context tags: cryptocurrency, Litecoin, LTC price",
+      "timestamp": 1780309192.607928,
+      "importance": 1.0
+    },
+    "User asked for the current LTC price.": {
+      "value": "Context tags: cryptocurrency, Litecoin, LTC price",
+      "timestamp": 1780309192.611058,
+      "importance": 1.0
+    },
+    "The current LTC price is approximately $130.": {
+      "value": "Context tags: cryptocurrency, Litecoin, LTC price",
+      "timestamp": 1780309192.616941,
+      "importance": 1.0
+    },
+    "User asked about 'Tien Sopa Cheese' which the assistant didn't recognize.": {
+      "value": "Context tags: Tien Sopa Cheese, Litecoin price, Watchmen (TV show/movie/comic), Wereham",
+      "timestamp": 1780309192.710187,
+      "importance": 1.0
+    },
+    "User asked for the current Litecoin price, which is $130.": {
+      "value": "Context tags: Tien Sopa Cheese, Litecoin price, Watchmen (TV show/movie/comic), Wereham",
+      "timestamp": 1780309192.716198,
+      "importance": 1.0
+    },
+    "User mentioned 'lives at Wereham watch the aggregation', which the assistant interpreted as 'Watchmen' and asked for clarification on 'Wereham'.": {
+      "value": "Context tags: Tien Sopa Cheese, Litecoin price, Watchmen (TV show/movie/comic), Wereham",
+      "timestamp": 1780309192.724276,
+      "importance": 1.0
+    },
+    "The user asked for an analysis of the current stock market.": {
+      "value": "Context tags: stock market, market analysis, S&P 500, investment advice",
+      "timestamp": 1780309650.741823,
+      "importance": 1.0
+    },
+    "The assistant described the market as volatile and fluctuating.": {
+      "value": "Context tags: stock market, market analysis, S&P 500, investment advice",
+      "timestamp": 1780309650.7434251,
+      "importance": 1.0
+    },
+    "The assistant mentioned the S&P 500 and sector performance.": {
+      "value": "Context tags: stock market, market analysis, S&P 500, investment advice",
+      "timestamp": 1780309650.744402,
+      "importance": 1.0
+    },
+    "The assistant clarified that it is not a professional and cannot give investment advice.": {
+      "value": "Context tags: stock market, market analysis, S&P 500, investment advice",
+      "timestamp": 1780309650.745934,
+      "importance": 1.0
+    },
+    "The user previously asked for a stock market analysis.": {
+      "value": "Context tags: stock market, personal finance, money",
+      "timestamp": 1780309681.5259242,
+      "importance": 1.0
+    },
+    "The assistant provided a brief, non-professional stock market overview, mentioning volatility, S&P 500 fluctuations, and varying sector performance (tech mixed, finance holding up).": {
+      "value": "Context tags: stock market, personal finance, money",
+      "timestamp": 1780309681.5270872,
+      "importance": 1.0
+    },
+    "The user made an off-topic comment about being 'sexy'.": {
+      "value": "Context tags: stock market, personal finance, money",
+      "timestamp": 1780309681.5284789,
+      "importance": 1.0
+    },
+    "The user stated they have returned money and now possess one lakh rupees.": {
+      "value": "Context tags: stock market, personal finance, money",
+      "timestamp": 1780309681.5295172,
+      "importance": 1.0
+    },
+    "The assistant provided a brief, non-professional analysis of the stock market, noting its volatility and fluctuating S&P 500, and varying sector performance (tech mixed, finance holding up).": {
+      "value": "Context tags: stock market, S&P 500, tech sector, finance sector, money",
+      "timestamp": 1780309681.900128,
+      "importance": 1.0
+    },
+    "The user stated they have returned money and now have one lakh rupees.": {
+      "value": "Context tags: stock market, S&P 500, tech sector, finance sector, money",
+      "timestamp": 1780309681.903849,
+      "importance": 1.0
+    },
+    "The user made a humorous request for the assistant to perform a physical action.": {
+      "value": "Context tags: humor, virtual assistant capabilities",
+      "timestamp": 1780310460.723152,
+      "importance": 1.0
+    },
+    "The assistant responded playfully, acknowledging its virtual nature.": {
+      "value": "Context tags: humor, virtual assistant capabilities",
+      "timestamp": 1780310460.725583,
+      "importance": 1.0
+    },
+    "The assistant, being virtual, cannot perform physical actions but played along humorously.": {
+      "value": "Context tags: humor, virtual assistant limitations",
+      "timestamp": 1780310460.8096662,
+      "importance": 1.0
+    },
+    "The conversation ended with laughter.": {
+      "value": "Context tags: humor, virtual assistant limitations",
+      "timestamp": 1780310460.812139,
+      "importance": 1.0
+    },
+    "The user mentioned 'high standard adoption potential'.": {
+      "value": "Context tags: pet adoption, rescue dogs",
+      "timestamp": 1780314392.425141,
+      "importance": 1.0
+    },
+    "The assistant interpreted this as pet adoption.": {
+      "value": "Context tags: pet adoption, rescue dogs",
+      "timestamp": 1780314392.4272141,
+      "importance": 1.0
+    },
+    "The user indicated they were leaving the conversation.": {
+      "value": "Context tags: pet adoption, rescue dogs",
+      "timestamp": 1780314392.4283159,
+      "importance": 1.0
+    },
+    "A white hole is theorized to be the opposite of a black hole, expelling matter and energy.": {
+      "value": "Context tags: black holes, white holes, wormholes, theoretical physics",
+      "timestamp": 1780314902.499552,
+      "importance": 1.0
+    },
+    "A wormhole is a theoretical shortcut through space-time.": {
+      "value": "Context tags: black holes, white holes, wormholes, theoretical physics",
+      "timestamp": 1780314902.501348,
+      "importance": 1.0
+    },
+    "In theory, a black hole and a white hole could be connected by a wormhole, allowing matter/energy to travel between them.": {
+      "value": "Context tags: black holes, white holes, wormholes, theoretical physics",
+      "timestamp": 1780314902.502549,
+      "importance": 1.0
+    },
+    "The user is asking about the theoretical connection between black holes, wormholes, and white holes.": {
+      "value": "Context tags: astrophysics, black holes, wormholes, white holes",
+      "timestamp": 1780314902.9092531,
+      "importance": 1.0
+    },
+    "The assistant has provided basic definitions for each concept.": {
+      "value": "Context tags: astrophysics, black holes, wormholes, white holes",
+      "timestamp": 1780314902.911146,
+      "importance": 1.0
     }
   }
 }

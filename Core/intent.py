@@ -21,9 +21,16 @@ Categorize the user's speech into one of the following intents:
 4. "study_mode": STRICTLY use this if the user explicitly asks you to "simulate", "animate", or open the "study simulator" for a concept. Do NOT use this for general academic questions or if they just ask "explain X" - those should go to "general".
 5. "web_search": The user is asking about current events, news, live weather, real-time facts, or explicitly asking you to search the web or check the internet. Example: "what is the global news", "what's the weather in Tokyo", "who won the game yesterday".
 6. "dynamic_action": The user wants you to PERFORM a real-world technical task that requires executing commands, making API calls, changing system/cloud settings, managing servers, or doing something actionable beyond just answering a question. Examples: "add my IP to MongoDB Atlas", "restart my server", "deploy my app", "check my disk space", "update my DNS records".
-7. "general": General conversation, answering academic questions, explaining concepts normally, or anything else.
+7. "agentic_task": Complex multi-step tasks requiring autonomous planning, research, and tool use. Examples: "Find me the best hotel in Delhi under ₹5000", "Research the latest AI papers and summarize them", "Compare iPhone 15 and 16 prices".
+8. "scheduled_task": Tasks involving scheduling, monitoring, recurring actions, or time-based triggers. Examples: "Monitor Bitcoin price", "Every morning at 10 AM summarize AI news", "Remind me to check email at 5 PM".
+9. "general": General conversation, answering academic questions, explaining concepts normally, or anything else.
 
-IMPORTANT: If the user is asking for live info/news, classify as "web_search". If the user is asking you to DO something specific and technical (not just explain it), classify as "dynamic_action". If they just want information or conversation, use "general".
+IMPORTANT: 
+- For live info/news, classify as "web_search". 
+- For specific technical actions, classify as "dynamic_action". 
+- For complex research/planning requiring multiple tools, classify as "agentic_task".
+- For any time-based monitoring or recurring jobs, classify as "scheduled_task".
+- If they just want information or conversation, use "general".
 
 Output ONLY valid JSON:
 {
