@@ -1,0 +1,22 @@
+[
+  {
+    "role": "user",
+    "content": "talking about vercel.",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "Vercel, yeah... So, it's like a platform for building and deploying web applications, right? They've got a serverless architecture, which means you don't have to worry about server management...",
+    "topic": "general"
+  },
+  {
+    "role": "user",
+    "content": "i want you to open vercel on web",
+    "topic": "general"
+  },
+  {
+    "role": "assistant",
+    "content": "{{\n \"intent\": \"tool\",\n \"tool\": \"search\",\n \"input\": \"open Vercel on web\"\n}}",
+    "topic": "general"
+  }
+]

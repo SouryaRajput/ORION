@@ -263,6 +263,46 @@
       "value": "Context tags: astrophysics, black holes, wormholes, white holes",
       "timestamp": 1780314902.911146,
       "importance": 1.0
+    },
+    "The user is interested in the theoretical connection between black holes, wormholes, and white holes.": {
+      "value": "Context tags: black holes, white holes, wormholes, cosmology, theoretical physics",
+      "timestamp": 1780324498.4854882,
+      "importance": 1.0
+    },
+    "The assistant explained a theoretical 'cosmological cycle' where matter falls into a black hole, travels through a wormhole, and emerges from a white hole.": {
+      "value": "Context tags: black holes, white holes, wormholes, cosmology, theoretical physics",
+      "timestamp": 1780324498.488561,
+      "importance": 1.0
+    },
+    "The assistant was in the process of explaining how space-time warping around a white hole is relevant when the user interrupted with a new question about 'solipsism'.": {
+      "value": "Context tags: black holes, white holes, wormholes, cosmology, theoretical physics",
+      "timestamp": 1780324498.491172,
+      "importance": 1.0
+    },
+    "The user initially asked about the theoretical connection between black holes, wormholes, and white holes.": {
+      "value": "Context tags: black holes, white holes, wormholes, solipsism, theoretical physics, philosophy",
+      "timestamp": 1780324501.1895812,
+      "importance": 1.0
+    },
+    "The assistant explained a theory where black holes and white holes could be connected by a wormhole, forming a 'cosmic tunnel' or 'cosmic loop'.": {
+      "value": "Context tags: black holes, white holes, wormholes, solipsism, theoretical physics, philosophy",
+      "timestamp": 1780324501.192051,
+      "importance": 1.0
+    },
+    "Matter and energy are theorized to travel from a black hole, through a wormhole, and emerge from a white hole.": {
+      "value": "Context tags: black holes, white holes, wormholes, solipsism, theoretical physics, philosophy",
+      "timestamp": 1780324501.1936839,
+      "importance": 1.0
+    },
+    "The user then abruptly changed the topic to ask about 'solipsism'.": {
+      "value": "Context tags: black holes, white holes, wormholes, solipsism, theoretical physics, philosophy",
+      "timestamp": 1780324501.195043,
+      "importance": 1.0
+    },
+    "The assistant defined solipsism as the philosophical idea that only one's own mind is certain to exist, and everything else might be a product of imagination.": {
+      "value": "Context tags: black holes, white holes, wormholes, solipsism, theoretical physics, philosophy",
+      "timestamp": 1780324501.197365,
+      "importance": 1.0
     }
   }
 }

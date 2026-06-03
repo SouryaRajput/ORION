@@ -39,13 +39,78 @@ class TaskGraph:
 
     def __init__(self, goal: str, nodes: list):
         self.goal = goal
+        self._validate_nodes(nodes)
         self.nodes = {n.id: n for n in nodes}
         self.output_registry = {}  # node_id → output
         self._lock = threading.Lock()
         self.cancelled = False
 
+    @staticmethod
+    def _validate_nodes(nodes: list):
+        """Reject malformed graphs before any tool can run."""
+        from agents.tool_registry import ToolRegistry
+
+        if not nodes:
+            raise ValueError("Task graph must contain at least one node.")
+        if len(nodes) > 12:
+            raise ValueError("Task graph exceeds the 12-node execution limit.")
+
+        node_ids = [node.id for node in nodes]
+        if len(node_ids) != len(set(node_ids)):
+            raise ValueError("Task graph contains duplicate node IDs.")
+
+        known_ids = set(node_ids)
+        for node in nodes:
+            if not node.id or not node.tool:
+                raise ValueError("Every task node needs an ID and tool.")
+            if ToolRegistry.get(node.tool) is None:
+                raise ValueError(f"Node '{node.id}' references unknown tool '{node.tool}'.")
+            unknown = set(node.depends_on) - known_ids
+            if unknown:
+                raise ValueError(
+                    f"Node '{node.id}' references unknown dependencies: {sorted(unknown)}"
+                )
+            if node.id in node.depends_on:
+                raise ValueError(f"Node '{node.id}' cannot depend on itself.")
+
+        visiting = set()
+        visited = set()
+        dependencies = {node.id: node.depends_on for node in nodes}
+
+        def visit(node_id):
+            if node_id in visiting:
+                raise ValueError("Task graph contains a dependency cycle.")
+            if node_id in visited:
+                return
+            visiting.add(node_id)
+            for dependency_id in dependencies[node_id]:
+                visit(dependency_id)
+            visiting.remove(node_id)
+            visited.add(node_id)
+
+        for node_id in node_ids:
+            visit(node_id)
+
+    def _skip_blocked_nodes(self):
+        """Mark nodes blocked by failed dependencies as skipped."""
+        for node in self.nodes.values():
+            if node.status != "pending":
+                continue
+            failed_dependencies = [
+                dependency_id
+                for dependency_id in node.depends_on
+                if self.nodes[dependency_id].status in ("failed", "skipped")
+            ]
+            if failed_dependencies:
+                node.status = "skipped"
+                node.error = (
+                    "Blocked by failed dependencies: "
+                    + ", ".join(failed_dependencies)
+                )
+
     def get_ready_nodes(self) -> list:
         """Return nodes whose dependencies are all 'done'."""
+        self._skip_blocked_nodes()
         ready = []
         for node in self.nodes.values():
             if node.status != "pending":
@@ -53,7 +118,6 @@ class TaskGraph:
             deps_met = all(
                 self.nodes[dep_id].status == "done"
                 for dep_id in node.depends_on
-                if dep_id in self.nodes
             )
             if deps_met:
                 ready.append(node)
@@ -62,7 +126,7 @@ class TaskGraph:
     def _all_done(self) -> bool:
         """Check if all nodes are in a terminal state."""
         return all(
-            n.status in ("done", "failed")
+            n.status in ("done", "failed", "skipped")
             for n in self.nodes.values()
         )
 
@@ -87,6 +151,8 @@ class TaskGraph:
         try:
             resolved_input = self._resolve_refs(node.tool_input)
             result = ToolRegistry.execute(node.tool, **resolved_input)
+            if isinstance(result, str) and result.startswith("Error"):
+                raise RuntimeError(result)
             node.output = result
             node.status = "done"
 
@@ -111,6 +177,7 @@ class TaskGraph:
         print(f"[GRAPH] Executing task graph for: {self.goal}")
         print(f"[GRAPH] {len(self.nodes)} nodes, max {max_workers} parallel workers")
 
+        max_workers = max(1, min(max_workers, 4, len(self.nodes)))
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             iteration = 0
             while not self._all_done() and not self.cancelled:
@@ -156,7 +223,7 @@ class TaskGraph:
         """Get a human-readable summary of the graph execution."""
         lines = [f"Task Graph: {self.goal}"]
         for node in self.nodes.values():
-            status_icon = {"done": "✅", "failed": "❌", "running": "🔄", "pending": "⏳"}.get(node.status, "?")
+            status_icon = {"done": "✅", "failed": "❌", "skipped": "⏭", "running": "🔄", "pending": "⏳"}.get(node.status, "?")
             output_preview = str(node.output)[:80] if node.output else (node.error or "—")
             lines.append(f"  {status_icon} {node.id}: {node.description} → {output_preview}")
         return "\n".join(lines)

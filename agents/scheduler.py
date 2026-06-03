@@ -16,6 +16,7 @@ from pathlib import Path
 
 
 SCHEDULES_FILE = Path("memory/schedules.json")
+VALID_SCHEDULE_TYPES = {"once", "cron", "monitor"}
 
 
 @dataclass
@@ -29,28 +30,38 @@ class ScheduledJob:
     last_run: Optional[float] = None
     created_at: float = field(default_factory=time.time)
     run_count: int = 0
+    last_alert: Optional[float] = None
+    last_error: Optional[str] = None
 
 
-def _match_cron_field(field_expr: str, value: int) -> bool:
+def _match_cron_field(field_expr: str, value: int, minimum: int, maximum: int) -> bool:
     """Check if a value matches a cron field expression."""
     if field_expr == "*":
         return True
-    
+
     for part in field_expr.split(","):
         part = part.strip()
         # Handle */N (every N)
         if part.startswith("*/"):
             divisor = int(part[2:])
+            if divisor <= 0:
+                raise ValueError("Cron step must be greater than zero.")
             if value % divisor == 0:
                 return True
         # Handle N-M (range)
         elif "-" in part:
             lo, hi = part.split("-", 1)
-            if int(lo) <= value <= int(hi):
+            lo, hi = int(lo), int(hi)
+            if not minimum <= lo <= hi <= maximum:
+                raise ValueError("Cron range is outside the valid field bounds.")
+            if lo <= value <= hi:
                 return True
         # Handle exact match
         else:
-            if value == int(part):
+            expected = int(part)
+            if not minimum <= expected <= maximum:
+                raise ValueError("Cron value is outside the valid field bounds.")
+            if value == expected:
                 return True
     return False
 
@@ -61,21 +72,61 @@ def _cron_matches(cron_expr: str, dt: datetime) -> bool:
     if len(fields) != 5:
         return False
     minute, hour, dom, month, dow = fields
-    return (
-        _match_cron_field(minute, dt.minute) and
-        _match_cron_field(hour, dt.hour) and
-        _match_cron_field(dom, dt.day) and
-        _match_cron_field(month, dt.month) and
-        _match_cron_field(dow, dt.weekday())  # 0=Monday in Python
-    )
+    try:
+        # Standard cron uses Sunday=0. Python's isoweekday uses Sunday=7.
+        cron_weekday = dt.isoweekday() % 7
+        return (
+            _match_cron_field(minute, dt.minute, 0, 59) and
+            _match_cron_field(hour, dt.hour, 0, 23) and
+            _match_cron_field(dom, dt.day, 1, 31) and
+            _match_cron_field(month, dt.month, 1, 12) and
+            (
+                _match_cron_field(dow, cron_weekday, 0, 7)
+                or (cron_weekday == 0 and _match_cron_field(dow, 7, 0, 7))
+            )
+        )
+    except (TypeError, ValueError):
+        return False
+
+
+def _validate_job(job: ScheduledJob):
+    """Validate persisted and newly parsed jobs before scheduling them."""
+    if not job.id or not job.name.strip() or not job.goal.strip():
+        raise ValueError("Scheduled jobs require an ID, name, and goal.")
+    if job.schedule_type not in VALID_SCHEDULE_TYPES:
+        raise ValueError(f"Unsupported schedule type: {job.schedule_type}")
+
+    if job.schedule_type == "once":
+        run_at = job.config.get("run_at")
+        if not run_at:
+            raise ValueError("One-time jobs require config.run_at.")
+        datetime.fromisoformat(run_at)
+    elif job.schedule_type == "cron":
+        cron_expr = job.config.get("cron", "")
+        if not cron_expr or not _cron_matches(cron_expr, datetime.now()):
+            # A valid cron expression need not match now, so validate fields
+            # against representative values as well.
+            fields = cron_expr.strip().split()
+            if len(fields) != 5:
+                raise ValueError("Cron jobs require a standard 5-field expression.")
+            checks = ((0, 0, 59), (0, 0, 23), (1, 1, 31), (1, 1, 12), (0, 0, 7))
+            for expression, (value, minimum, maximum) in zip(fields, checks):
+                _match_cron_field(expression, value, minimum, maximum)
+    else:
+        poll_interval = int(job.config.get("poll_interval", 300))
+        if poll_interval < 30:
+            raise ValueError("Monitor poll_interval must be at least 30 seconds.")
+        job.config["poll_interval"] = poll_interval
 
 
 class Scheduler:
     def __init__(self):
         self.jobs: dict[str, ScheduledJob] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._stop_event = threading.Event()
+        self._running_jobs: set[str] = set()
         self._poll_interval = 30  # seconds
         self._load_jobs()
 
@@ -87,8 +138,12 @@ class Scheduler:
             with open(SCHEDULES_FILE, "r") as f:
                 data = json.load(f)
             for item in data:
-                job = ScheduledJob(**item)
-                self.jobs[job.id] = job
+                try:
+                    job = ScheduledJob(**item)
+                    _validate_job(job)
+                    self.jobs[job.id] = job
+                except Exception as e:
+                    print(f"[SCHEDULER] Skipping invalid persisted job: {e}")
             print(f"[SCHEDULER] Loaded {len(self.jobs)} scheduled jobs.")
         except Exception as e:
             print(f"[SCHEDULER] Failed to load jobs: {e}")
@@ -98,13 +153,16 @@ class Scheduler:
         try:
             SCHEDULES_FILE.parent.mkdir(parents=True, exist_ok=True)
             data = [asdict(job) for job in self.jobs.values()]
-            with open(SCHEDULES_FILE, "w") as f:
+            temp_file = SCHEDULES_FILE.with_suffix(".tmp")
+            with open(temp_file, "w") as f:
                 json.dump(data, f, indent=2)
+            temp_file.replace(SCHEDULES_FILE)
         except Exception as e:
             print(f"[SCHEDULER] Failed to save jobs: {e}")
 
     def add_job(self, job: ScheduledJob):
         """Register a new scheduled job."""
+        _validate_job(job)
         with self._lock:
             self.jobs[job.id] = job
             self._save_jobs()
@@ -125,7 +183,9 @@ class Scheduler:
             return [
                 {"id": j.id, "name": j.name, "type": j.schedule_type,
                  "active": j.active, "run_count": j.run_count,
-                 "last_run": j.last_run}
+                 "last_run": j.last_run, "last_alert": j.last_alert,
+                 "last_error": j.last_error,
+                 "running": j.id in self._running_jobs}
                 for j in self.jobs.values()
             ]
 
@@ -133,6 +193,7 @@ class Scheduler:
         """Start the scheduler daemon thread."""
         if self._running:
             return
+        self._stop_event.clear()
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True, name="scheduler")
         self._thread.start()
@@ -141,6 +202,7 @@ class Scheduler:
     def stop(self):
         """Stop the scheduler."""
         self._running = False
+        self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
         print("[SCHEDULER] Stopped.")
@@ -185,15 +247,22 @@ class Scheduler:
                 if should_run:
                     self._execute_job(job)
 
-            time.sleep(self._poll_interval)
+            self._stop_event.wait(self._poll_interval)
 
     def _execute_job(self, job: ScheduledJob):
         """Execute a scheduled job in a background thread."""
+        with self._lock:
+            if job.id in self._running_jobs:
+                return
+            self._running_jobs.add(job.id)
+            job.last_run = time.time()
+            job.run_count += 1
+            self._save_jobs()
+
         def _run():
             try:
                 print(f"[SCHEDULER] Running job: {job.name}")
-                job.last_run = time.time()
-                job.run_count += 1
+                job.last_error = None
 
                 from agents.background import BackgroundManager
 
@@ -211,15 +280,22 @@ class Scheduler:
                     if condition:
                         condition_met = self._check_condition(condition, result)
                         if condition_met:
-                            # Condition met! Deliver urgent notification
-                            BackgroundManager._deliver_notification(
-                                type("Task", (), {
-                                    "name": job.name,
-                                    "result": f"ALERT: {condition}. Current data: {result[:300]}",
-                                    "priority": "urgent"
-                                })()
-                            )
-                            print(f"[SCHEDULER] Monitor condition MET for: {job.name}")
+                            cooldown = int(job.config.get("alert_cooldown", 3600))
+                            now_ts = time.time()
+                            if job.last_alert is None or now_ts - job.last_alert >= cooldown:
+                                # Condition met! Deliver urgent notification
+                                BackgroundManager._deliver_notification(
+                                    type("Task", (), {
+                                        "name": job.name,
+                                        "result": f"ALERT: {condition}. Current data: {result[:300]}",
+                                        "priority": "urgent",
+                                        "status": "done"
+                                    })()
+                                )
+                                job.last_alert = now_ts
+                                print(f"[SCHEDULER] Monitor condition MET for: {job.name}")
+                            else:
+                                print(f"[SCHEDULER] Monitor alert cooldown active for: {job.name}")
                         else:
                             print(f"[SCHEDULER] Monitor condition NOT met for: {job.name}. Will check again.")
                     else:
@@ -228,7 +304,8 @@ class Scheduler:
                             type("Task", (), {
                                 "name": job.name,
                                 "result": result[:300],
-                                "priority": "normal"
+                                "priority": "normal",
+                                "status": "done"
                             })()
                         )
                 else:
@@ -244,11 +321,13 @@ class Scheduler:
                 if job.schedule_type == "once":
                     job.active = False
 
-                with self._lock:
-                    self._save_jobs()
-
             except Exception as e:
+                job.last_error = str(e)
                 print(f"[SCHEDULER] Job '{job.name}' error: {e}")
+            finally:
+                with self._lock:
+                    self._running_jobs.discard(job.id)
+                    self._save_jobs()
 
         threading.Thread(target=_run, daemon=True, name=f"sched-{job.id}").start()
 
@@ -262,6 +341,8 @@ class Scheduler:
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 api_key = os.getenv("OPENROUTER_API_KEY")
+                if not api_key:
+                    raise RuntimeError("No API key configured for condition checks.")
                 url = "https://openrouter.ai/api/v1/chat/completions"
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                 model = "google/gemini-2.5-flash"
@@ -318,6 +399,8 @@ def parse_schedule_from_text(text: str) -> ScheduledJob:
     }
 
     try:
+        if not api_key:
+            raise RuntimeError("No OPENROUTER_API_KEY configured.")
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -329,13 +412,15 @@ def parse_schedule_from_text(text: str) -> ScheduledJob:
         content = re.sub(r'```json|```', '', content).strip()
         parsed = json.loads(content)
 
-        return ScheduledJob(
+        job = ScheduledJob(
             id=str(uuid.uuid4())[:8],
             name=parsed.get("name", "Scheduled Task"),
             goal=parsed.get("goal", text),
             schedule_type=parsed.get("schedule_type", "once"),
             config=parsed.get("config", {})
         )
+        _validate_job(job)
+        return job
 
     except Exception as e:
         print(f"[SCHEDULER] Failed to parse schedule: {e}")

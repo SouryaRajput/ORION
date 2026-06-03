@@ -28,6 +28,7 @@ SAFE_PREFIXES = (
     "date", "uname", "python3 -c \"import", "python3 -c 'import",
     "hostname", "printenv", "defaults read",
 )
+SHELL_CONTROL_TOKENS = (";", "&&", "||", "|", "`", "$(", "\n", "\r", ">", "<")
 
 AGENT_SYSTEM_PROMPT = """You are ORION's action planner. The user has asked you to perform a real-world task on their macOS computer.
 
@@ -117,6 +118,8 @@ def plan_action(user_request: str) -> Optional[dict]:
 def is_command_safe(command: str) -> bool:
     """Check if a command is read-only and safe to auto-execute."""
     cmd_stripped = command.strip()
+    if not cmd_stripped or any(token in cmd_stripped for token in SHELL_CONTROL_TOKENS):
+        return False
     return any(cmd_stripped.startswith(prefix) for prefix in SAFE_PREFIXES)
 
 
@@ -243,13 +246,12 @@ def execute_action(user_request: str, confirm_fn=None, speak_fn=None) -> str:
     for i, step in enumerate(steps):
         cmd = step.get("command", "")
         desc = step.get("description", f"Step {i+1}")
-        marked_safe = step.get("safe", False)
-
         if not cmd:
             continue
 
         # Safety check
-        auto_safe = is_command_safe(cmd) or marked_safe
+        # The planner cannot grant itself permission by setting safe=true.
+        auto_safe = is_command_safe(cmd)
 
         if not auto_safe:
             if confirm_fn:

@@ -29,10 +29,12 @@ class ToolRegistry:
         return cls._tools.get(name)
 
     @classmethod
-    def execute(cls, name: str, **kwargs) -> Any:
+    def execute(cls, name: str, *, allow_unsafe: bool = False, **kwargs) -> Any:
         tool = cls._tools.get(name)
         if not tool:
             return f"Error: Tool '{name}' not found. Available: {list(cls._tools.keys())}"
+        if not tool.is_safe and not allow_unsafe:
+            return f"Error: Tool '{name}' requires explicit user confirmation."
         try:
             return tool.function(**kwargs)
         except Exception as e:
@@ -271,7 +273,7 @@ def register_all_tools():
              {"url": "The URL to read"}, _browser_read_page, category="browser"),
 
         Tool("browser_navigate", "Navigate to a URL and perform an action: 'click' (selector), 'fill' (selector|value), 'screenshot', or 'read'.",
-             {"url": "The URL to navigate to", "action": "click/fill/screenshot/read", "selector": "CSS selector or text (for click/fill)"}, _browser_navigate, category="browser"),
+             {"url": "The URL to navigate to", "action": "click/fill/screenshot/read", "selector": "CSS selector or text (for click/fill)"}, _browser_navigate, is_safe=False, category="browser"),
 
         Tool("browser_screenshot", "Take a screenshot of a webpage.",
              {"url": "The URL to screenshot"}, _browser_screenshot, category="browser"),
@@ -280,10 +282,10 @@ def register_all_tools():
              {"command": "The shell command to run"}, _shell_execute, is_safe=False, category="system"),
 
         Tool("open_app", "Open a macOS application by name.",
-             {"name": "The application name (e.g. 'Chrome', 'Terminal')"}, _open_app, category="system"),
+             {"name": "The application name (e.g. 'Chrome', 'Terminal')"}, _open_app, is_safe=False, category="system"),
 
         Tool("open_url", "Open a URL in the default web browser.",
-             {"url": "The URL to open"}, _open_url, category="system"),
+             {"url": "The URL to open"}, _open_url, is_safe=False, category="system"),
 
         Tool("screen_capture", "Take a screenshot of the current screen.",
              {}, _screen_capture, category="vision"),
@@ -295,16 +297,16 @@ def register_all_tools():
              {"prompt": "What to look for or analyze on the screen"}, _screen_analyze, category="vision"),
 
         Tool("click_target", "Click on a text element visible on the screen.",
-             {"target": "The text to click on"}, _click_target, category="interaction"),
+             {"target": "The text to click on"}, _click_target, is_safe=False, category="interaction"),
 
         Tool("type_text", "Type text using the keyboard at the current cursor position.",
-             {"text": "The text to type"}, _type_text, category="interaction"),
+             {"text": "The text to type"}, _type_text, is_safe=False, category="interaction"),
 
         Tool("press_key", "Press a keyboard key (enter, tab, escape, space, etc).",
-             {"key": "The key to press"}, _press_key, category="interaction"),
+             {"key": "The key to press"}, _press_key, is_safe=False, category="interaction"),
 
         Tool("remember", "Store important information in long-term memory for future recall.",
-             {"category": "Memory category (e.g. 'user_preferences', 'facts')", "key": "Short label", "value": "The information to remember"}, _remember, category="memory"),
+             {"category": "Memory category (e.g. 'user_preferences', 'facts')", "key": "Short label", "value": "The information to remember"}, _remember, is_safe=False, category="memory"),
 
         Tool("recall", "Search long-term memory for information relevant to a query.",
              {"query": "What to search for in memory"}, _recall, category="memory"),
@@ -313,7 +315,7 @@ def register_all_tools():
              {"prompt": "The analysis instruction", "data": "The data to analyze (optional)"}, _llm_analyze, category="reasoning"),
 
         Tool("speak_to_user", "Speak a message to the user via voice. Use sparingly for important updates.",
-             {"message": "The message to speak"}, _speak_to_user, category="communication"),
+             {"message": "The message to speak"}, _speak_to_user, is_safe=False, category="communication"),
     ]
 
     for tool in tools:

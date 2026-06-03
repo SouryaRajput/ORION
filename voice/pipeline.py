@@ -352,14 +352,11 @@ def handle_intent(data):
             try:
                 sm.pipeline_active = True
 
-                def _confirm():
-                    """Voice-based confirmation for unsafe commands."""
-                    # For now, auto-confirm. Future: use STT to listen for yes/no.
-                    return True
-
                 result = execute_action(
                     task_description,
-                    confirm_fn=_confirm,
+                    # Unsafe shell actions stay blocked until an explicit
+                    # confirmation flow is implemented.
+                    confirm_fn=None,
                     speak_fn=lambda msg: speech_queue.put(msg),
                 )
                 speech_queue.put(result)
@@ -391,12 +388,16 @@ def handle_intent(data):
         
         # Parse and add the schedule in background so we don't block voice
         def _setup_schedule():
-            from agents.scheduler import parse_schedule_from_text
-            import voice.service as service
-            
-            job = parse_schedule_from_text(goal)
-            service.scheduler.add_job(job)
-            speech_queue.put(f"Scheduled: {job.name}.")
+            try:
+                from agents.scheduler import parse_schedule_from_text
+                import voice.service as service
+
+                job = parse_schedule_from_text(goal)
+                service.scheduler.add_job(job)
+                speech_queue.put(f"Scheduled: {job.name}.")
+            except Exception as e:
+                print(f"[SCHEDULER] Setup failed: {e}")
+                speech_queue.put("Sorry, I couldn't create that schedule.")
             
         threading.Thread(target=_setup_schedule, daemon=True, name="schedule-setup").start()
         return

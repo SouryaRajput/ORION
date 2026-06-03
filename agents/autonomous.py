@@ -22,13 +22,16 @@ class AgentLoop:
     """
 
     def __init__(self, goal: str, max_steps: int = 20, speak_fn: Optional[Callable] = None):
+        if not goal.strip():
+            raise ValueError("Agent goal cannot be empty.")
         self.goal = goal
-        self.max_steps = max_steps
+        self.max_steps = max(1, min(max_steps, 20))
         self.speak_fn = speak_fn
         self.scratchpad = []        # List of {thought, action, input, observation}
         self.step = 0
         self.cancelled = False
         self._start_time = None
+        self._recent_actions = []
 
     def run(self) -> str:
         """Execute the ReAct loop. Returns the final answer string."""
@@ -73,8 +76,18 @@ class AgentLoop:
             action = decision.get("action", "")
             action_input = decision.get("action_input", {})
             thought = decision.get("thought", "")
+            if not action or not isinstance(action_input, dict):
+                print("[AGENT] Invalid action payload from planner.")
+                return self._force_summarize()
 
-            print(f"[AGENT] Step {self.step + 1}: {thought[:80]}...")
+            signature = json.dumps([action, action_input], sort_keys=True)
+            self._recent_actions.append(signature)
+            self._recent_actions = self._recent_actions[-3:]
+            if len(self._recent_actions) == 3 and len(set(self._recent_actions)) == 1:
+                print(f"[AGENT] Stopping repeated action loop: {action}")
+                return self._force_summarize()
+
+            print(f"[AGENT] Step {self.step + 1}: planning {action}...")
             print(f"[AGENT]   → {action}({json.dumps(action_input)[:100]})")
 
             # Execute the tool
