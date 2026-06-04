@@ -38,6 +38,10 @@ class BackgroundManager:
         thread_name_prefix="bg"
     )
     _max_retained_tasks = max(10, int(os.getenv("BACKGROUND_MAX_RETAINED_TASKS", "200")))
+    
+    _waiting_for_input = False
+    _input_response = None
+    _input_event = threading.Event()
 
     @classmethod
     def _prune_completed_locked(cls):
@@ -58,6 +62,40 @@ class BackgroundManager:
         cls._notify_fn = fn
 
     @classmethod
+    def request_input(cls, question: str) -> str:
+        """Pause the thread, speak the question, and wait for voice input."""
+        if cls._notify_fn:
+            cls._notify_fn(question)
+        
+        with cls._lock:
+            cls._waiting_for_input = True
+            cls._input_response = None
+            cls._input_event.clear()
+            
+        print(f"[BG] Waiting for user input: {question}")
+        
+        # Block until the user speaks or 60 seconds pass
+        answered = cls._input_event.wait(timeout=60.0)
+        
+        with cls._lock:
+            cls._waiting_for_input = False
+            if answered and cls._input_response:
+                response = cls._input_response
+            else:
+                response = "The user did not respond. Assume the ideal generic situation and proceed."
+            cls._input_response = None
+            
+        return response
+
+    @classmethod
+    def provide_input(cls, text: str):
+        """Provide voice input back to the blocked thread."""
+        with cls._lock:
+            if cls._waiting_for_input:
+                cls._input_response = text
+                cls._input_event.set()
+
+    @classmethod
     def submit(
         cls,
         name: str,
@@ -70,8 +108,8 @@ class BackgroundManager:
             raise ValueError("Background task goal cannot be empty.")
         if priority not in ("urgent", "normal"):
             raise ValueError("Background task priority must be 'urgent' or 'normal'.")
-        if execution_mode not in ("graph", "react"):
-            raise ValueError("Execution mode must be 'graph' or 'react'.")
+        if execution_mode not in ("graph", "react", "deep_research"):
+            raise ValueError("Execution mode must be 'graph', 'react', or 'deep_research'.")
 
         task_id = str(uuid.uuid4())[:8]
 
@@ -93,10 +131,13 @@ class BackgroundManager:
 
                 if task.execution_mode == "graph":
                     from agents.task_graph import execute_goal_as_graph
-                    result = execute_goal_as_graph(goal=task.goal, speak_fn=None)
+                    result = execute_goal_as_graph(goal=task.goal, speak_fn=cls._notify_fn)
+                elif task.execution_mode == "deep_research":
+                    from agents.deep_research import execute_deep_research
+                    result = execute_deep_research(goal=task.goal, speak_fn=cls._notify_fn)
                 else:
                     from agents.autonomous import AgentLoop
-                    agent = AgentLoop(goal=task.goal, max_steps=20, speak_fn=None)
+                    agent = AgentLoop(goal=task.goal, max_steps=20, speak_fn=cls._notify_fn)
                     with cls._lock:
                         task._agent = agent
                     result = agent.run()
@@ -136,8 +177,13 @@ class BackgroundManager:
             return
         if task.priority == "urgent" and cls._notify_fn:
             # Urgent: interrupt and speak immediately
-            summary = task.result[:200] if task.result else "Task completed."
-            cls._notify_fn(f"Urgent update on {task.name}: {summary}")
+            if task.execution_mode == "deep_research":
+                # Do NOT truncate deep research results! Speak the whole essay.
+                summary = task.result if task.result else "Deep research completed, but no result was generated."
+                cls._notify_fn(summary)
+            else:
+                summary = task.result[:200] if task.result else "Task completed."
+                cls._notify_fn(f"Urgent update on {task.name}: {summary}")
         else:
             # Normal: queue for next interaction
             with cls._lock:

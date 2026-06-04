@@ -165,6 +165,12 @@ def handle_speech_recognized(text):
     state.LAST_TEXT_TIME = now
     sm.set_followup(False)
     
+    # Check if a background thread is waiting for an answer
+    from agents.background import BackgroundManager
+    if BackgroundManager._waiting_for_input:
+        BackgroundManager.provide_input(text)
+        return
+
     # 1. Fast Paths
     from plugins.plugin_manager import check_fast_command
     fast_result = check_fast_command(text)
@@ -193,7 +199,9 @@ def handle_speech_recognized(text):
         "open", "launch", "close", "workspace", 
         "study", "simulate", "animate", "teach",
         "search", "news", "weather", 
-        "server", "deploy", "dns", "database", "check"
+        "server", "deploy", "dns", "database", "check",
+        "go to", "copy", "paste", "login", "fill", "scrape", "find", "automate", "build", "create",
+        "deep research", "research deeply", "research mode", "plan", "compare", "cheapest", "budget", "flights", "hotels"
     ]
     
     needs_router = any(word in text.lower() for word in trigger_words)
@@ -380,6 +388,20 @@ def handle_intent(data):
             priority="normal"
         )
         print(f"[PIPELINE] Submitted background task {task_id}")
+        return
+
+    elif intent == "deep_research":
+        goal = target if target else text
+        speech_queue.put("Got it. I'm starting a deep planning and research dive on that. I'll read multiple sources and generate a detailed report. Give me a moment.")
+        
+        from agents.background import BackgroundManager
+        task_id = BackgroundManager.submit(
+            name="Deep Research", 
+            goal=goal,
+            priority="urgent", # Urgent so it speaks as soon as it's done
+            execution_mode="deep_research"
+        )
+        print(f"[PIPELINE] Submitted deep research task {task_id}")
         return
 
     elif intent == "scheduled_task":

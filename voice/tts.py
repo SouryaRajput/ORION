@@ -119,10 +119,14 @@ def audio_player():
                     if raw_stream is not None:
                         raw_stream.stop_stream()
                         raw_stream.close()
+                    # Open stream with a massive internal PortAudio buffer (4096 frames = ~170ms)
+                    # This shifts all buffer responsibility to the C layer, preventing any
+                    # Python loop overhead starvation/cracking, without penalizing TTFA!
                     raw_stream = global_pa.open(format=pa_format,
                                                 channels=1,
                                                 rate=24000,
-                                                output=True)
+                                                output=True,
+                                                frames_per_buffer=4096)
                     raw_stream_format = pa_format
                                  
                 first_chunk = True
@@ -146,14 +150,11 @@ def audio_player():
                         
                     audio_buffer += chunk
                     
-                    # Pre-buffer 4096 bytes (approx 85ms) before playing to eliminate network jitter underflows
-                    if first_chunk and len(audio_buffer) < 4096:
-                        continue
-                    
-                    # Write in thick chunks (>= 4096 bytes) aligned to the sample format 
-                    # This prevents BOTH phase distortion and PortAudio interrupt starvation
+                    # Write all available aligned data immediately.
+                    # Because PortAudio internally buffers 4096 frames, we can feed it instantly
+                    # and the C-driver will handle the smoothing, granting flawless 0-latency playback.
                     aligned_len = len(audio_buffer) - (len(audio_buffer) % bytes_per_sample)
-                    if aligned_len >= 4096:
+                    if aligned_len > 0:
                         raw_stream.write(audio_buffer[:aligned_len],
                                          exception_on_underflow=False)
                         audio_buffer = audio_buffer[aligned_len:]

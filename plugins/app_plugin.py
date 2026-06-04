@@ -15,7 +15,27 @@ class AppLauncherPlugin(FastCommandPlugin):
                 from Core.system_control import open_app
                 success = open_app(app)
                 if success:
+                    print(f"Orion: Opening {app}.")
                     return {"action": "reply", "reply": f"Opening {app}."}
                 else:
+                    # Web search fallback for websites/web-apps (e.g. "open render")
+                    try:
+                        import requests, re, urllib.parse
+                        query = urllib.parse.quote(app)
+                        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+                        res = requests.get(f"https://www.google.com/search?btnI=1&q={query}", headers=headers, timeout=3)
+                        
+                        # Google "I'm Feeling Lucky" returns a Redirect Notice page
+                        match = re.search(r'<a href="([^"]+)">', res.text)
+                        if match:
+                            url = match.group(1)
+                            if url.startswith("http"):
+                                webbrowser.open(url)
+                                print(f"Orion: I couldn't find a local app for {app}, but I opened it on the web.")
+                                return {"action": "reply", "reply": f"I couldn't find a local app for {app}, but I opened it on the web."}
+                    except Exception:
+                        pass
+                    
+                    print(f"Orion: I couldn't find {app}.")
                     return {"action": "reply", "reply": f"I couldn't find {app}."}
         return None
